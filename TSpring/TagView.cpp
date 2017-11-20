@@ -48,7 +48,21 @@ CRect DrawCvMat(CDC* pDC, cv::Mat& origin, CRect rect,int alphablend=0,cv::Rotat
 			}
 		}
 		cv::flip(outImg, outImg, 0);
-	} else {
+	} else if (alphablend == 3) {
+		outImg = origin.clone();
+		cv::Rect cvrect = rrect.boundingRect();
+		cv::Point2f pt[4];
+		rrect.points(pt);
+		cv::Vec3b c(210, 139, 38);
+		for (int y = cvrect.y; y < cvrect.y + cvrect.height; y++) {
+			for (int x = cvrect.x; x < cvrect.x + cvrect.width; x++) {
+				if (ispring::CVGeometry::PtInRectangle(cv::Point(x, y), pt[0], pt[1], pt[2], pt[3]) == true) {
+					outImg.at<cv::Vec3b>(y, x) = origin.at<cv::Vec3b>(y, x)*0.3 + c*0.7;
+				}
+			}
+		}
+		cv::flip(outImg, outImg, 0);
+	}else {
 		cv::flip(origin, outImg, 0);
 	}
 	//흑백이면 채널을3으로
@@ -103,11 +117,26 @@ TagView::TagView(CWnd* wnd) : VirtualView(wnd) {
 
 	m_stc_path = new MStatic(wnd, MRect(MRectPosition::B, 10, 30, 380, 5));
 	m_stc_path->m_color_text = &g_lv_color_text;
+
+	m_stc_tag_info = new MStatic(wnd, MRect(MRectPosition::RB, 10, 50, 380, 30));
+	m_stc_tag_info->m_color_text = &g_lv_color_text;
+
+	m_stc_box_angle = new MStatic(wnd, MRect(MRectPosition::RB, 10, 100, 380, 30));
+	m_stc_box_angle->m_color_text = &g_tag_color_text_purple;
+
+	m_stc_box_size = new MStatic(wnd, MRect(MRectPosition::RB, 10, 150, 380, 30));
+	m_stc_box_size->m_color_text = &g_tag_color_text_purple;
+
+	m_stc_box_center = new MStatic(wnd, MRect(MRectPosition::RB, 10, 200, 380, 30));
+	m_stc_box_center->m_color_text = &g_tag_color_text_purple;
+
+	m_stc_box_class = new MStatic(wnd, MRect(MRectPosition::RB, 10, 250, 380, 30));
+	m_stc_box_class->m_color_text = &g_tag_color_text_purple;
+
+
 	m_drag_point.x = -1;
 	m_drag_point.y = -1;
-
-	
-
+	m_img_rect.left = -1;
 }
 
 
@@ -128,6 +157,11 @@ void TagView::OnPaint(CDC* pDC) {
 		m_stc_path->m_text.Format(TEXT("[%d] %s"), g_tag_idx, g_image_data->at(g_tag_idx).first);
 	}
 	m_stc_path->OnPaint(pDC);
+
+	m_stc_tag_info->m_text.Format(TEXT("%d box%s tagged"), m_tag_data.size(), TEXT("\0es") + (m_tag_data.size() > 1));
+	m_stc_tag_info->OnPaint(pDC);
+
+	
 	if (m_list_class->m_select == -1 && g_class_data->size() > 0) {
 		m_list_class->m_select = 0;
 	}
@@ -154,37 +188,45 @@ void TagView::OnPaint(CDC* pDC) {
 		std::string cpp_path = mspring::String::ToString(path);
 		m_img.release();
 		m_img = cv::imread(cpp_path);
+		m_img_rect.left = -1;
 		ReadTagFile();
 	}
 	pDC->Rectangle(rect_image);
+	int focused = -1;
 	if (m_img.empty() == false) {
 		//Draw image
+		focused = GetFocusedTag();
+		int will_remove = -1;
 		if ((GetAsyncKeyState(VK_RBUTTON) & 0x8000)) {
 			cv::Point2f rpt;
 			rpt.x = (m_r_down.x - m_img_rect.left)*m_img.cols/ m_img_rect.Width();
 			rpt.y = (m_r_down.y - m_img_rect.top)* m_img.rows/m_img_rect.Height();
 			float min_area = std::numeric_limits<float>::max();
-			cv::RotatedRect will_remove;
-			for (auto&e : m_tag_data) {
+			for(int i=0;i<m_tag_data.size();i++){
 				cv::Point2f pt[4];
-				e.m_rect.points(pt);
+				m_tag_data[i].m_rect.points(pt);
 				if (ispring::CVGeometry::PtInRectangle(rpt, pt[0], pt[1], pt[2], pt[3]) == true) {
-					if (min_area > e.m_rect.size.width*e.m_rect.size.height) {
-						min_area = e.m_rect.size.width*e.m_rect.size.height;
-						will_remove = e.m_rect;
+					if (min_area > m_tag_data[i].m_rect.size.width*m_tag_data[i].m_rect.size.height) {
+						min_area = m_tag_data[i].m_rect.size.width*m_tag_data[i].m_rect.size.height;
+						will_remove = i;
 					}
 				}
 			}
-			m_img_rect = DrawCvMat(pDC, m_img, rect_image, 2, will_remove);
+			m_img_rect = DrawCvMat(pDC, m_img, rect_image, 2, m_tag_data[will_remove].m_rect);
 		}
 		else if (m_drag_point.x != -1 && m_drag_point.y != -1) {
 			m_img_rect = DrawCvMat(pDC, m_img, rect_image,1,m_tag_data.back().m_rect);
 		} else {
-			m_img_rect = DrawCvMat(pDC, m_img, rect_image);
+			if (focused != -1) {
+				m_img_rect = DrawCvMat(pDC, m_img, rect_image,3,m_tag_data[focused].m_rect);
+			} else {
+				m_img_rect = DrawCvMat(pDC, m_img, rect_image);
+			}
 		}
 		//Draw tag info
 		cv::Point2f pt[4];
-		for (auto&e : m_tag_data) {
+		for (int i = 0; i<m_tag_data.size(); i++) {
+			auto e = m_tag_data[i];
 			e.m_rect.points(pt);
 			for (int j = 0; j < 4; j++) {
 				pt[j].x = pt[j].x*m_img_rect.Width() / m_img.cols + m_img_rect.left;
@@ -197,6 +239,31 @@ void TagView::OnPaint(CDC* pDC) {
 			for (int j = 0; j < 4; j++) {
 				pDC->LineTo(pt[j].x, pt[j].y);
 			}
+			if (e.m_class >= g_class_data->size()) {
+				CPoint cpt[4];
+				for (int j = 0; j < 4; j++) {
+					cpt[j].x = pt[j].x;
+					cpt[j].y = pt[j].y;
+				}
+				
+				CBitmap bmp;
+				CBrush brush; if (will_remove == i) {
+					bmp.LoadBitmap(IDB_UNKNOWN_RED);
+				}
+				else if (focused == i) {
+					bmp.LoadBitmap(IDB_UNKNOWN_BLUE);
+				}
+				 else {
+					bmp.LoadBitmap(IDB_UNKNOWN);
+				}
+				brush.CreatePatternBrush(&bmp);
+				CBrush* old_brush = pDC->SelectObject(&brush);
+
+				pDC->Polygon(cpt, 4);
+				pDC->SelectObject(old_brush);
+				bmp.DeleteObject();
+				brush.DeleteObject();
+			}
 			pDC->SelectObject(old_pen);
 			pen.DeleteObject();
 		}
@@ -208,7 +275,22 @@ void TagView::OnPaint(CDC* pDC) {
 
 	pDC->SelectObject(old_pen);
 	pDC->SelectObject(old_brush);
-
+	if (focused != -1) {
+		if (m_tag_data[focused].m_class >= m_list_class->m_data.size()) {
+			m_stc_box_class->m_text.Format(TEXT("class : Unknown(%d)"), m_tag_data[focused].m_class);
+			m_stc_box_class->m_color_text = &g_tag_color_text_red;
+		} else {
+			m_stc_box_class->m_text.Format(TEXT("class : %s(%d)"), m_list_class->m_data[m_tag_data[focused].m_class].first, m_tag_data[focused].m_class);
+			m_stc_box_class->m_color_text = &g_tag_color_text_purple;
+		}
+		m_stc_box_center->m_text.Format(TEXT("X : %f , Y : %f"), m_tag_data[focused].m_rect.center.x, m_tag_data[focused].m_rect.center.y);
+		m_stc_box_size->m_text.Format(TEXT("W : %f , H : %f"), m_tag_data[focused].m_rect.size.width, m_tag_data[focused].m_rect.size.height);
+		m_stc_box_angle->m_text.Format(TEXT("Angle : %f"), -m_tag_data[focused].m_rect.angle);
+		m_stc_box_class->OnPaint(pDC);
+		m_stc_box_center->OnPaint(pDC);
+		m_stc_box_size->OnPaint(pDC);
+		m_stc_box_angle->OnPaint(pDC);
+	}
 }
 void TagView::OnSetFocus(CWnd* pOldWnd) {
 	VirtualView::OnSetFocus(pOldWnd);
@@ -224,6 +306,10 @@ void TagView::OnLButtonDown(UINT nFlags, CPoint point) {
 	if ((GetAsyncKeyState(VK_RBUTTON) & 0x8000)) {
 		return;
 	}
+	if (m_list_class->m_select == -1) {
+		this->m_parent->MessageBox(TEXT("Please, make class list before tagging"));
+		return;
+	}
 	if (m_list_class->m_select != -1 && m_img_rect.PtInRect(point)) {
 		m_drag_point = point;
 		m_angle = 0;
@@ -237,6 +323,9 @@ void TagView::OnLButtonUp(UINT nFlags, CPoint point) {
 	m_list_class->OnLButtonUp();
 	m_drag_point.x = -1;
 	m_drag_point.y = -1;
+	if (m_tag_data.back().m_rect.size.width < 32 || m_tag_data.back().m_rect.size.height < 32) {
+		m_tag_data.pop_back();
+	}
 	WriteTagFile();
 }
 void TagView::OnLButtonDblClk(UINT nFlags, CPoint point) {
@@ -245,11 +334,23 @@ void TagView::OnLButtonDblClk(UINT nFlags, CPoint point) {
 }
 void TagView::OnRButtonDown(UINT nFlags, CPoint point) {
 	VirtualView::OnRButtonDown(nFlags, point);
+	m_r_down = this->GetMousePoint();
+	static int i = 0;
+
+	SetCursor(AfxGetApp()->LoadCursor(IDC_CURSOR1+i));
+	i++;
+	if (i == 180) {
+		i = 0;
+	}
+	this->m_parent->Invalidate();
 }
 void TagView::OnRButtonUp(UINT nFlags, CPoint point) {
 	VirtualView::OnRButtonUp(nFlags, point);
 	m_list_class->OnRButtonUp();
-
+	if (m_tag_data.size() == 0) {
+		return;
+	}
+	SetCursor(LoadCursor(NULL, IDC_ARROW));
 	cv::Point2f rpt;
 	rpt.x = (m_r_down.x - m_img_rect.left)*m_img.cols / m_img_rect.Width();
 	rpt.y = (m_r_down.y - m_img_rect.top)* m_img.rows / m_img_rect.Height();
@@ -359,6 +460,9 @@ void TagView::OnTimer(UINT_PTR nIDEvent) {
 		if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000)) {
 			m_drag_point.x = -1;
 			m_drag_point.y = -1;
+			if (m_tag_data.back().m_rect.size.width < 32 || m_tag_data.back().m_rect.size.height < 32) {
+				m_tag_data.pop_back();
+			}
 			m_parent->KillTimer(MOUSE_LEAVE_TIMER_ID);
 			WriteTagFile();
 			return;

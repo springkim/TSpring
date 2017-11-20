@@ -5,7 +5,7 @@
 #include"mspring/control.h"
 #include"ispring/All.h"
 #include"repository.h"
-
+#include"resource.h"
 #include<wykobi/wykobi.hpp>
 #include<wykobi/wykobi_algorithm.hpp>
 class TagInfo {
@@ -22,6 +22,15 @@ class TagView : public VirtualView {
 public:
 	MListBox* m_list_class;
 	MStatic* m_stc_path;
+	MStatic* m_stc_tag_info;
+	
+	MStatic* m_stc_box_class;
+	MStatic* m_stc_box_center;
+	MStatic* m_stc_box_size;
+	MStatic* m_stc_box_angle;
+
+
+
 	cv::Mat m_img;
 	CRect m_img_rect;
 	std::vector<TagInfo> m_tag_data;
@@ -30,7 +39,37 @@ protected:
 	int m_angle = 0;
 protected:
 	CPoint m_r_down;
-
+	int GetFocusedTag() {
+		if (m_tag_data.size() == 0) {
+			return -1;
+		}
+		if (m_img.empty() == true) {
+			return -1;
+		}
+		if (m_img_rect.left == -1) {
+			return -1;
+		}
+		if (m_drag_point.x != -1 && m_drag_point.y != -1) {
+			return m_tag_data.size() - 1;
+		}
+		CPoint point = this->GetMousePoint();
+		cv::Point2f rpt;
+		rpt.x = (point.x - m_img_rect.left)*m_img.cols / m_img_rect.Width();
+		rpt.y = (point.y - m_img_rect.top)* m_img.rows / m_img_rect.Height();
+		float min_area = std::numeric_limits<float>::max();
+		int ret = -1;
+		for (int i = 0; i<m_tag_data.size(); i++) {
+			cv::Point2f pt[4];
+			m_tag_data[i].m_rect.points(pt);
+			if (ispring::CVGeometry::PtInRectangle(rpt, pt[0], pt[1], pt[2], pt[3]) == true) {
+				if (min_area > m_tag_data[i].m_rect.size.width*m_tag_data[i].m_rect.size.height) {
+					min_area = m_tag_data[i].m_rect.size.width*m_tag_data[i].m_rect.size.height;
+					ret = i;
+				}
+			}
+		}
+		return ret;
+	}
 	void UpdateTagInfo() {
 		CPoint point = this->GetMousePoint();
 		cv::RotatedRect rrect;
