@@ -61,7 +61,9 @@ public:
 	MSpringMenuFrame* m_menu_frame = nullptr;
 	MSpringTabFrame* m_tab_frame = nullptr;
 
-
+protected:
+	HCURSOR m_cursor;
+	HCURSOR m_cursor_prev;
 
 // 생성된 메시지 맵 함수
 protected:
@@ -75,6 +77,7 @@ public:
 	afx_msg void OnGetMinMaxInfo(MINMAXINFO* lpMMI);
 	afx_msg void OnFileOpenimagefolder();
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg BOOL OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message);
 };
 
 

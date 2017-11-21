@@ -7,6 +7,7 @@
 #include"repository.h"
 #include"resource.h"
 #include<wykobi/wykobi.hpp>
+#include<wykobi/wykobi_math.hpp>
 #include<wykobi/wykobi_algorithm.hpp>
 class TagInfo {
 public:
@@ -23,22 +24,29 @@ public:
 	MListBox* m_list_class;
 	MStatic* m_stc_path;
 	MStatic* m_stc_tag_info;
-	
+
 	MStatic* m_stc_box_class;
 	MStatic* m_stc_box_center;
 	MStatic* m_stc_box_size;
 	MStatic* m_stc_box_angle;
 
-
+	MButtonCheck* m_chk_edit;
+	MStatic* m_stc_edit;
 
 	cv::Mat m_img;
 	CRect m_img_rect;
 	std::vector<TagInfo> m_tag_data;
+
 protected:
 	CPoint m_drag_point;
 	int m_angle = 0;
 protected:
 	CPoint m_r_down;
+protected:
+	bool m_is_edit = false;
+	CPoint m_apex[2];
+	int m_edit_idx = -1;
+protected:
 	int GetFocusedTag() {
 		if (m_tag_data.size() == 0) {
 			return -1;
@@ -51,6 +59,9 @@ protected:
 		}
 		if (m_drag_point.x != -1 && m_drag_point.y != -1) {
 			return m_tag_data.size() - 1;
+		}
+		if (m_edit_idx != -1) {
+			return m_edit_idx;
 		}
 		CPoint point = this->GetMousePoint();
 		cv::Point2f rpt;
@@ -108,14 +119,17 @@ protected:
 				cvp2.x = cvp1.x + (cvp2.y - cvp1.y);
 			}
 		}
-		if (*g_is_square == true || *g_is_rectangle == true) {
-			angle = 0;
+		if (m_is_edit == false) {
+			if (*g_is_square == true || *g_is_rectangle == true) {
+				angle = 0;
+			}
 		}
 		cv::RotatedRect rrect;
 		rrect.angle = -angle;
 		rrect.center.x = (cvp1.x + cvp2.x) / 2.0F;
 		rrect.center.y = (cvp1.y + cvp2.y) / 2.0F;
-		if (*g_is_r2pt == false) {
+		if (*g_is_r2pt == false && m_is_edit == false) {
+			std::cout << m_is_edit << std::endl;
 			rrect.size.width = std::fabs(cvp1.x - cvp2.x);
 			rrect.size.height = std::fabs(cvp1.y - cvp2.y);
 		} else {
@@ -137,7 +151,7 @@ protected:
 			lines[1][0].y = cvp2.y;
 			lines[1][1].x = af2.x;
 			lines[1][1].y = af2.y;
-			
+
 			std::vector<wykobi::point2d<float>> intersection_list;
 			wykobi::algorithm::naive_group_intersections<wykobi::segment<wykobi::point2d<float>, 2>>
 				(lines.begin(), lines.end(), std::back_inserter(intersection_list));
@@ -151,6 +165,9 @@ protected:
 		return rrect;
 	}
 	void WriteTagFile() {
+		if (g_tag_idx < 0 || g_image_data->empty() == true) {
+			return;
+		}
 		CString& c_img_path = g_image_data->at(g_tag_idx).first;
 		std::string img_path = mspring::String::ToString(c_img_path);
 		std::string tsp_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsp";
@@ -197,6 +214,7 @@ protected:
 			m_tag_data.push_back(TagInfo(_class, rr));
 		}
 	}
+
 public:
 	TagView(CWnd* wnd);
 	~TagView();
@@ -204,7 +222,7 @@ public:
 	int OnCreate()override;
 	void OnDestroy()override;
 	void DrawAlphaBlend(CDC* pDC) {
-				
+
 	}
 	void OnPaint(CDC* pDC)override;
 	void OnSetFocus(CWnd* pOldWnd)override;

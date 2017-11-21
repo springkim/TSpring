@@ -23,6 +23,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, MSpringFrame)
 	ON_WM_GETMINMAXINFO()
 	ON_COMMAND(ID_FILE_OPENIMAGEFOLDER, &CMainFrame::OnFileOpenimagefolder)
 	ON_WM_LBUTTONDOWN()
+	ON_WM_SETCURSOR()
 END_MESSAGE_MAP()
 
 // CMainFrame 생성/소멸
@@ -228,4 +229,15 @@ void CMainFrame::OnLButtonDown(UINT nFlags, CPoint point) {
 		this->OnNcPaint();
 	}
 	MSpringFrame::OnLButtonDown(nFlags, point);
+}
+
+
+BOOL CMainFrame::OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message) {
+	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
+	if (g_degree != -1) {
+		m_cursor = AfxGetApp()->LoadCursor(IDC_CURSOR1 + (g_degree + 90) % 180);
+		m_cursor_prev = SetCursor(m_cursor);
+		return TRUE;
+	}
+	return MSpringFrame::OnSetCursor(pWnd, nHitTest, message);
 }
