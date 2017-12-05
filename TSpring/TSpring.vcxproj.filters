@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="ExportView">
+      <UniqueIdentifier>{3412655e-6ce0-4ed2-8f7c-b9d1f9841ea3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -45,6 +48,9 @@
     <ClInclude Include="repository.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="ExportYOLOv2.h">
+      <Filter>ExportView</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TSpring.cpp">
@@ -64,6 +70,9 @@
     </ClCompile>
     <ClCompile Include="ExportView.cpp">
       <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="ExportYOLOv2.cpp">
+      <Filter>ExportView</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

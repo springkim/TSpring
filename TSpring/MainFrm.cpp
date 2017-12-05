@@ -24,6 +24,8 @@ BEGIN_MESSAGE_MAP(CMainFrame, MSpringFrame)
 	ON_COMMAND(ID_FILE_OPENIMAGEFOLDER, &CMainFrame::OnFileOpenimagefolder)
 	ON_WM_LBUTTONDOWN()
 	ON_WM_SETCURSOR()
+	ON_WM_DESTROY()
+	ON_COMMAND(ID_FILE_CLEARIMAGES, &CMainFrame::OnFileClearimages)
 END_MESSAGE_MAP()
 
 // CMainFrame 생성/소멸
@@ -38,7 +40,7 @@ CMainFrame::~CMainFrame() {
 int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct) {
 	if (MSpringFrame::OnCreate(lpCreateStruct) == -1)
 		return -1;
-//#ifdef _DEBUG
+#ifdef _DEBUG
 	if (::AllocConsole() == TRUE) {
 		FILE* nfp[3];
 		freopen_s(nfp + 0, "CONOUT$", "rb", stdin);
@@ -46,7 +48,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct) {
 		freopen_s(nfp + 2, "CONOUT$", "wb", stderr);
 		std::ios::sync_with_stdio(false);
 	}
-//#endif
+#endif
 	// 프레임의 클라이언트 영역을 차지하는 뷰를 만듭니다.
 	if (!m_wndView.Create(NULL, NULL, AFX_WS_DEFAULT_VIEW,
 						  CRect(0, 0, 0, 0), this, AFX_IDW_PANE_FIRST, NULL)) {
@@ -94,6 +96,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct) {
 	m_export_view = new ExportView(&m_wndView);
 	m_wndView.m_view = m_list_view;
 
+	ReadSettingFile();
 	return 0;
 }
 
@@ -240,4 +243,16 @@ BOOL CMainFrame::OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message) {
 		return TRUE;
 	}
 	return MSpringFrame::OnSetCursor(pWnd, nHitTest, message);
+}
+
+
+void CMainFrame::OnDestroy() {
+	WriteSettingFile();
+	MSpringFrame::OnDestroy();
+}
+
+
+void CMainFrame::OnFileClearimages() {
+	g_image_data->clear();
+	this->Invalidate();
 }

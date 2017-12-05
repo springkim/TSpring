@@ -22,6 +22,10 @@ ListView::ListView(CWnd* wnd) : VirtualView(wnd) {
 	m_btn_load_class->m_text = "Load classes";
 	m_btn_load_class->m_color_text = &g_lv_color_text_white;
 
+	m_btn_export_class = new MButton(wnd, MRect(MRectPosition::RB, 140, 100, 120, 30));
+	m_btn_export_class->m_text = "Export classes";
+	m_btn_export_class->m_color_text = &g_lv_color_text_white;
+
 	m_chk_detection = new MButtonCheck(wnd, MRect(MRectPosition::LB, 10, 150, 25, 25));
 	m_chk_detection->m_color_text= &g_lv_color_text_white;
 	m_stc_detection = new MStatic(wnd, MRect(MRectPosition::LB, 50, 150, 250, 25));
@@ -80,37 +84,27 @@ ListView::~ListView() {
 }
 int ListView::OnCreate() {
 	VirtualView::OnCreate();
+	
 	return 1;
 }
 void ListView::OnDestroy() {
 	VirtualView::OnDestroy();
+	this->m_parent->KillTimer(MOUSE_LEAVE_TIMER_ID);
 }
 
 void ListView::OnPaint(CDC* pDC) {
 	VirtualView::OnPaint(pDC);
-	for (auto&e : m_list_image->m_data) {
-		std::string img_path = mspring::String::ToString(e.first);
-		if (m_chk_detection->check == true) {
-			std::string tsp_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsp";
-			if (ispring::File::FileExist(tsp_path) == true) {
-				e.second = true;
-			} else {
-				e.second = false;
-			}
-		} else if (m_chk_segmentation->check == true) {
-			std::string tsps_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsps";
-			if (ispring::File::FileExist(tsps_path) == true) {
-				e.second = true;
-			} else {
-				e.second = false;
-			}
-		}
+	static bool init = true;
+	if (init == true) {
+		init = false;
+		this->m_parent->SetTimer(MOUSE_LEAVE_TIMER_ID, 5000, nullptr);
 	}
 	m_list_image->OnPaint(pDC);
 	m_list_class->OnPaint(pDC);
 	m_edit_class->OnPaint(pDC);
 	m_btn_add_class->OnPaint(pDC);
 	m_btn_load_class->OnPaint(pDC);
+	m_btn_export_class->OnPaint(pDC);
 	m_chk_detection->OnPaint(pDC);
 	m_stc_detection->OnPaint(pDC);
 	m_chk_segmentation->OnPaint(pDC);
@@ -133,7 +127,7 @@ void ListView::OnPaint(CDC* pDC) {
 			c++;
 		}
 	}
-	int ratio = 0;
+	size_t ratio = 0;
 	if (c != 0) {
 		ratio = c * 100 / m_list_image->m_data.size();
 	}
@@ -155,10 +149,12 @@ void ListView::OnLButtonDown(UINT nFlags, CPoint point) {
 	m_list_class->OnLButtonDown();
 	m_edit_class->OnLButtonDown();
 
-	if (m_chk_detection->OnLButtonDown() == M_CLICKED && m_chk_detection->check == true) {
+	if (m_chk_detection->OnLButtonDown() == M_CLICKED) {
+		m_chk_detection->check = true;
 		m_chk_segmentation->check = false;
 	}
-	if (m_chk_segmentation->OnLButtonDown() == M_CLICKED && m_chk_segmentation->check == true) {
+	if (m_chk_segmentation->OnLButtonDown() == M_CLICKED) {
+		m_chk_segmentation->check = true;
 		m_chk_detection->check = false;
 	}
 	if (m_chk_detection->check == true) {
@@ -168,30 +164,32 @@ void ListView::OnLButtonDown(UINT nFlags, CPoint point) {
 				m_chk_tracking->check = false;
 			}
 		}
-		if (m_chk_square->OnLButtonDown() == M_CLICKED && m_chk_square->check == true) {
+		if (m_chk_square->OnLButtonDown() == M_CLICKED ) {
+			m_chk_square->check = true;
 			m_chk_rectangle->check = false;
 			m_chk_r_mid->check = false;
 			m_chk_r_2pt->check = false;
 		}
-		if (m_chk_rectangle->OnLButtonDown() == M_CLICKED && m_chk_rectangle->check == true) {
+		if (m_chk_rectangle->OnLButtonDown() == M_CLICKED ) {
+			m_chk_rectangle->check = true;
 			m_chk_square->check = false;
 			m_chk_r_mid->check = false;
 			m_chk_r_2pt->check = false;
 		}
-		if (m_chk_r_mid->OnLButtonDown() == M_CLICKED && m_chk_r_mid->check == true) {
+		if (m_chk_r_mid->OnLButtonDown() == M_CLICKED ) {
+			m_chk_r_mid->check = true;
 			m_chk_rectangle->check = false;
 			m_chk_square->check = false;
 			m_chk_r_2pt->check = false;
 			m_chk_tracking->check = false;
 		}
-		if (m_chk_r_2pt->OnLButtonDown() == M_CLICKED && m_chk_r_2pt->check == true) {
+		if (m_chk_r_2pt->OnLButtonDown() == M_CLICKED) {
+			m_chk_r_2pt->check = true;
 			m_chk_rectangle->check = false;
 			m_chk_square->check = false;
 			m_chk_r_mid->check = false;
 			m_chk_tracking->check = false;
 		}
-
-		
 	}
 	if (m_btn_add_class->OnLButtonDown() == M_CLICKED) {
 		if (m_edit_class->m_text.GetLength() > 0) {
@@ -237,6 +235,26 @@ void ListView::OnLButtonDown(UINT nFlags, CPoint point) {
 				msg.Format(TEXT("%d classes are overlapped!!"), overlap);
 				this->m_parent->MessageBox(msg);
 			}
+		}
+	}
+	if (m_btn_export_class->OnLButtonDown() == M_CLICKED) {
+		const TCHAR* FILTER = TEXT("All Files (*.*)|*.*|Text Files (*.txt)|*.txt|");
+		CFileDialog dlg(FALSE, TEXT("txt"), TEXT("*.txt"), OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR, FILTER, NULL);
+		dlg.m_ofn.nFilterIndex = 2;
+		if (IDOK == dlg.DoModal()) {
+			CString cfile=dlg.GetPathName();
+			std::string file = mspring::String::ToString(cfile);
+			std::fstream fout;
+			fout.open(file, std::ios::out);
+			if (fout.is_open() == false) {
+				this->m_parent->MessageBox(TEXT("Invalid file path!"));
+				return;
+			}
+			for (auto&e : m_list_class->m_data) {
+				fout << mspring::String::ToString(e.first) << std::endl;
+			}
+			fout.close();
+			this->m_parent->MessageBox(TEXT("Export success"));
 		}
 	}
 }
@@ -377,13 +395,35 @@ void ListView::OnTimer(UINT_PTR nIDEvent) {
 	m_edit_class->OnTimer(nIDEvent);
 	m_btn_add_class->OnTimer(nIDEvent);
 	m_btn_load_class->OnTimer(nIDEvent);
+	if (nIDEvent == MOUSE_LEAVE_TIMER_ID) {
+		for (auto&e : m_list_image->m_data) {
+			std::string img_path = mspring::String::ToString(e.first);
+			if (m_chk_detection->check == true) {
+				std::string tsp_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsp";
+				if (ispring::File::FileExist(tsp_path) == true) {
+					e.second = true;
+				} else {
+					e.second = false;
+				}
+			} else if (m_chk_segmentation->check == true) {
+				std::string tsps_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsps";
+				if (ispring::File::FileExist(tsps_path) == true) {
+					e.second = true;
+				} else {
+					e.second = false;
+				}
+			}
+		}
+	}
 }
 void ListView::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags) {
 	VirtualView::OnChar(nChar, nRepCnt, nFlags);
 	m_list_image->OnChar(nChar);
 	m_list_class->OnChar(nChar);
 	if (nChar != VK_RETURN) {
-		m_edit_class->OnChar(nChar);
+		if (std::isspace(nChar) == false) {
+			m_edit_class->OnChar(nChar);
+		}
 	} else if (m_edit_class->isFocused() == true) {
 		if (m_edit_class->m_text.GetLength() > 0) {
 			auto val = std::make_pair(m_edit_class->m_text, false);

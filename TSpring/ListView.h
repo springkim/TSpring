@@ -1,4 +1,5 @@
 #pragma once
+#include<cctype>
 #include"mspring/frame.h"
 #include"mspring/view.h"
 #include"mspring/control.h"
@@ -9,6 +10,7 @@
 #include"repository.h"
 
 class ListView :public VirtualView {
+	const int MOUSE_LEAVE_TIMER_ID = 0x11110005;
 public:
 	MListBox* m_list_image;
 
@@ -16,6 +18,7 @@ public:
 	MEdit* m_edit_class;
 	MButton* m_btn_add_class;
 	MButton* m_btn_load_class;
+	MButton* m_btn_export_class;
 
 	MButtonCheck* m_chk_detection;
 	MStatic* m_stc_detection;

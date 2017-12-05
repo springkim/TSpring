@@ -26,3 +26,6 @@ __declspec(selectany) int g_tag_idx = 0;
 __declspec(selectany) std::atomic<COLORREF> g_tag_color_text_purple = RGB(108,113,196);
 __declspec(selectany) std::atomic<COLORREF> g_tag_color_text_red = RGB(220,50,47);
 __declspec(selectany) int g_degree = -1;
+
+///Export View
+__declspec(selectany) std::atomic<COLORREF> g_solarized_yellow = RGB(181,137,0);

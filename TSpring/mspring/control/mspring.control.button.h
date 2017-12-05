@@ -80,6 +80,7 @@ public:
 class MButtonCheck : public MControlObject {
 public:
 	bool check = false;
+	bool disable = false;
 public:
 	MButtonCheck(CWnd* parent, MRect base) : MControlObject(parent, base) {
 		
@@ -89,7 +90,9 @@ public:
 		CRect rect = m_rect.GetRect(view_rect);
 		CPen null_pen;null_pen.CreatePen(PS_NULL, 0, RGB(0, 0, 0));
 		CBrush brush;
-		if (this->m_state == MControlState::CLICK) {
+		if (disable == true) {
+			brush.CreateSolidBrush(*this->m_color_other);
+		}else if (this->m_state == MControlState::CLICK) {
 			brush.CreateSolidBrush(GetDarkColor(*this->m_color_fr));
 		} else if (this->m_state == MControlState::NORMAL) {
 			brush.CreateSolidBrush(*this->m_color_fr);
@@ -99,7 +102,7 @@ public:
 		CPen* old_pen=pDC->SelectObject(&null_pen);
 		CBrush* old_brush = pDC->SelectObject(&brush);
 		pDC->RoundRect(&rect, CPoint(5, 5));
-		if (check == true) {
+		if (check == true && disable==false) {
 			CPen pen;
 			pen.CreatePen(PS_SOLID, 3, *m_color_text);
 			pDC->SelectObject(&pen);
@@ -116,6 +119,9 @@ public:
 	}
 	INT OnLButtonDown()override {
 		MControlObject::OnLButtonDown();
+		if (disable == true) {
+			return 1;
+		}
 		CPoint point = this->GetMousePoint();
 		CRect rect;
 		m_parent->GetClientRect(&rect);
@@ -135,6 +141,9 @@ public:
 		return 1;
 	}
 	INT OnMouseMove()override {
+		if (disable == true) {
+			return 1;
+		}
 		CPoint point = this->GetMousePoint();
 		CRect rect;
 		m_parent->GetClientRect(&rect);
@@ -239,7 +248,7 @@ public:
 
 		pDC->SelectObject(old_font);
 		pDC->SelectObject(old_pen);
-
+		pen.DeleteObject();
 		font.DeleteObject();
 		return 1;
 	}

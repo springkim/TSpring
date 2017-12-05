@@ -82,6 +82,7 @@ public:
 		if (CWnd::OnCreate(lpCreateStruct) == -1) {
 			return -1;
 		}
+		SAFETY_CALL(m_view, OnCreate);
 		return 0;
 	}
 	afx_msg void OnSetFocus(CWnd* pOldWnd) {
@@ -140,6 +141,11 @@ public:
 		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
 		this->Invalidate();
 	}
+	afx_msg void OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags) {
+		SAFETY_CALL(m_view, OnKeyUp, nChar, nRepCnt, nFlags);
+		CWnd::OnKeyUp(nChar, nRepCnt, nFlags);
+		this->Invalidate();
+	}
 	afx_msg void OnDestroy() {
 		CWnd::OnDestroy();
 		SAFETY_CALL(m_view, OnDestroy);
@@ -194,6 +200,7 @@ MSPRING_BEGIN_MESSAGE_MAP(MSpringView, CWnd)
 	ON_WM_MOUSELEAVE()
 	ON_WM_MOUSEWHEEL()
 	ON_WM_KEYDOWN()
+	ON_WM_KEYUP()
 	ON_WM_DESTROY()
 	ON_WM_TIMER()
 	ON_WM_NCACTIVATE()

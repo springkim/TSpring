@@ -15,7 +15,7 @@
 #define MSPRING_7E1_A_9__RECT_HPP_INCLUDED
 #include<afxwin.h>
 enum MRectPosition {
-	LT, RT, LB, RB,DYNAMIC,L,R,T,B
+	LT, RT, LB, RB, DYNAMIC, L, R, T, B
 };
 class MRect {
 private:
@@ -25,7 +25,7 @@ private:
 	int m_xd2;	//pos가 DYNAMIC이면 right-dist, 그 이외의 경우 width 입니다.
 	int m_yd2;	//pos가 DYNAMIC이면 bottom-dist, 그 이외의 경우 height 입니다.
 public:
-	MRect(MRectPosition pos,int xd,int yd,int xd2,int yd2) {
+	MRect(MRectPosition pos, int xd, int yd, int xd2, int yd2) {
 		m_pos = pos;
 		m_xd = xd;
 		m_yd = yd;
