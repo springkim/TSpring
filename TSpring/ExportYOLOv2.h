@@ -1,8 +1,23 @@
 #pragma once
+#include<cstring>
+#include<array>
 #include "mspring/view.h"
 #include"mspring/control.h"
 #include"repository.h"
+#include"ispring/All.h"
 
+#include"cfg_darknet_reference.h"
+#include"cfg_darknet19.h"
+#include"cfg_densenet201.h"
+#include"cfg_resnet50.h"
+#include"gen_anchors.h"
+struct YOLOBOX {
+	int m_class;
+	float x;
+	float y;
+	float w;
+	float h;
+};
 class ExportYOLOv2 : public VirtualView {
 public:
 	ExportYOLOv2(CWnd* wnd);
@@ -56,13 +71,91 @@ public:
 	MButtonCheck* m_chk_noise_blur;
 	MStatic* m_stc_noise_blur;
 	//================OPTION
-
+	int GetWidth() {
+		if (m_chk_resolution416->check == true) {
+			return 416;
+		}
+		if (m_chk_resolution480->check == true) {
+			return 480;
+		}
+		if (m_chk_resolution544->check == true) {
+			return 544;
+		}
+		if (m_chk_resolution608->check == true) {
+			return 608;
+		}
+		if (m_chk_resolution1088->check == true) {
+			return 1088;
+		}
+		if (m_chk_resolution_random->check == true) {
+			return 416;
+		}
+		return 416;
+	}
+	int GetRandom() {
+		if (m_chk_resnet50->check == true) {
+			return 0;
+		}
+		if (m_chk_resolution_random->check == true) {
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+	std::pair<char*, std::string> GetCFG() {
+		static char tmp[65536];
+		std::pair<char*, std::string> cfg;
+		if (m_chk_darknet_r->check == true) {
+			cfg.first = cfg_darknetR;
+			cfg.second = "darknet-reference";
+		} else if (m_chk_darknet19->check == true) {
+			cfg.first = cfg_darknet19;
+			cfg.second = "darknet19";
+		} else if (m_chk_resnet50->check == true) {
+			cfg.first = cfg_resnet50;
+			cfg.second = "resnet50";
+		} else if (m_chk_densenet201->check == true) {
+			memset(tmp, 0, 65536);
+			strcpy_s(tmp, 65535, cfg_densenet201_part1);
+			strcat_s(tmp, 65535, cfg_densenet201_part2);
+			cfg.first = tmp;
+			cfg.second = "densenet201";
+		}
+		return cfg;
+	}
+	int GetClasses() {
+		int classes = 0;
+		for (auto&e : *g_export_class_data) {
+			if (e.second == true) {
+				classes++;
+			}
+		}
+		return classes;
+	}
+	int GetNumOfAnchors() {
+		if (m_chk_anchor3->check == true) {
+			return 3;
+		}
+		if (m_chk_anchor5->check == true) {
+			return 5;
+		}
+		if (m_chk_anchor7->check == true) {
+			return 7;
+		}
+		if (m_chk_anchor9->check == true) {
+			return 9;
+		}
+		if (m_chk_anchor11->check == true) {
+			return 11;
+		}
+		return 1;
+	}
 	std::vector<MControlObject*> m_objs;
 	std::vector<MControlObject*> m_base_model;
 	std::vector<MControlObject*> m_anchors;
 	std::vector<MControlObject*> m_resolution;
 	std::vector<MControlObject*> m_noise;
-	void Export(bool is_rotate, bool is_ignore);
+	void Export();
 public:
 	int OnCreate()override;
 	void OnDestroy()override;

@@ -2,7 +2,7 @@
 #include "ExportView.h"
 #include<opencv2/opencv.hpp>
 ExportView::ExportView(CWnd* wnd) : VirtualView(wnd), m_yolov2(wnd){
-	m_list_class = new MListBox(wnd, MRect(MRectPosition::R, 380, 10, 10, 300));
+	m_list_class = new MListBox(wnd, MRect(MRectPosition::R, 380, 10, 10, 400));
 	m_list_class->m_color_bk = &g_lv_color_bk;
 	m_list_class->m_color_text = &g_lv_color_text;
 	m_list_class->is_check = true;
@@ -31,42 +31,66 @@ ExportView::ExportView(CWnd* wnd) : VirtualView(wnd), m_yolov2(wnd){
 	m_stc_dlibcnn->m_color_text = &g_lv_color_text;
 	m_stc_dlibcnn->m_text = TEXT("dlib cnn");
 
-	m_chk_rotate = new MButtonCheck(wnd, MRect(MRectPosition::RB, 380-25, 270, 25, 25));
+	m_chk_rotate = new MButtonCheck(wnd, MRect(MRectPosition::RB, 380-25, 370, 25, 25));
 	m_chk_rotate->m_color_text = &g_lv_color_text_white;
-	m_stc_rotate = new MStatic(wnd, MRect(MRectPosition::RB, 380-25-200-10, 270, 200, 25));
+	m_stc_rotate = new MStatic(wnd, MRect(MRectPosition::RB, 380-25-200-10, 370, 200, 25));
 	m_stc_rotate->m_color_text = &g_lv_color_text;
 	m_stc_rotate->m_text = TEXT("Enable Rotate");
 
-	m_chk_boundingbox = new MButtonCheck(wnd, MRect(MRectPosition::RB, 380 - 25, 240, 25, 25));
+	m_chk_boundingbox = new MButtonCheck(wnd, MRect(MRectPosition::RB, 380 - 25, 340, 25, 25));
 	m_chk_boundingbox->m_color_text = &g_lv_color_text_white;
-	m_stc_boundingbox = new MStatic(wnd, MRect(MRectPosition::RB, 380 - 25 - 200 - 10, 240, 200, 25));
+	m_stc_boundingbox = new MStatic(wnd, MRect(MRectPosition::RB, 380 - 25 - 200 - 10, 340, 200, 25));
 	m_stc_boundingbox->m_color_text = &g_lv_color_text;
 	m_stc_boundingbox->m_text = TEXT("BoundingBox");
-	m_chk_ignore_rbox = new MButtonCheck(wnd, MRect(MRectPosition::RB, 380 - 25, 210, 25, 25));
+	m_chk_ignore_rbox = new MButtonCheck(wnd, MRect(MRectPosition::RB, 380 - 25, 310, 25, 25));
 	m_chk_ignore_rbox->m_color_text = &g_lv_color_text_white;
-	m_stc_ignore_rbox = new MStatic(wnd, MRect(MRectPosition::RB, 380 - 25 - 200 - 10, 210, 200, 25));
+	m_stc_ignore_rbox = new MStatic(wnd, MRect(MRectPosition::RB, 380 - 25 - 200 - 10, 310, 200, 25));
 	m_stc_ignore_rbox->m_color_text = &g_lv_color_text;
 	m_stc_ignore_rbox->m_text = TEXT("Ignore RotatedRect");
 
-	m_stc_name=new MStatic(wnd, MRect(MRectPosition::RB, 310, 150, 80, 30));
+	m_stc_name=new MStatic(wnd, MRect(MRectPosition::RB, 310, 265, 80, 30));
 	m_stc_name->m_color_text = &g_lv_color_text;
 	m_stc_name->m_text = TEXT("Data : ");
 
-	m_edit_name = new MEdit(wnd, MRect(MRectPosition::RB, 10, 150, 300, 30));
+	m_edit_name = new MEdit(wnd, MRect(MRectPosition::RB, 10, 265, 300, 30));
 	m_edit_name->m_color_text = &g_lv_color_text_white;
 	
-	m_btn_export = new MButton(wnd, MRect(MRectPosition::RB, 10, 90, 380, 30));
+	m_btn_export = new MButton(wnd, MRect(MRectPosition::RB, 10, 30, 380, 30));
 	m_btn_export->m_text = TEXT("Export data");
 	m_btn_export->m_color_text = &g_lv_color_text_white;
 
-	for (size_t i = 2; 25 * i<300; i++) {
+	for (int i = 2; 25 * i<300; i++) {
 		MStatic* doc = new MStatic(wnd, MRect(MRectPosition::B, 10,25, 400, 25*i));
 		doc->m_color_text = &g_lv_color_text;
 		doc->m_text = TEXT("");
 		m_doc.push_front(doc);
 		m_objs.push_back(doc);
 	}
+	m_stc_ratio=new MStatic(wnd, MRect(MRectPosition::RB, 10, 220, 380, 25));
+	m_stc_ratio->m_color_text = &g_lv_color_text;
+	m_stc_ratio->m_text = TEXT("");
 
+	m_sli_slider= new MSlider(wnd, MRect(MRectPosition::RB, 10, 190, 380, 20));
+	m_sli_slider->m_vertical = false;
+	m_sli_slider->m_color_bk = new std::atomic<COLORREF>(RGB(147,161,161));
+	m_sli_slider->m_color_other=new std::atomic<COLORREF>(RGB(253,246,227));
+	m_sli_slider->m_pos = 0.8F;
+
+	m_stc_size = new MStatic(wnd, MRect(MRectPosition::RB, 10, 160, 380, 25));
+	m_stc_size->m_color_text = &g_lv_color_text;
+	m_stc_size->m_text = TEXT("");
+
+	m_sli_size = new MSlider(wnd, MRect(MRectPosition::RB, 10, 120, 380, 20));
+	m_sli_size->m_vertical = false;
+	m_sli_size->m_color_bk = new std::atomic<COLORREF>(RGB(147, 161, 161));
+	m_sli_size->m_color_other = new std::atomic<COLORREF>(RGB(253, 246, 227));
+	m_sli_size->m_pos = 1.0F;
+
+
+	m_objs.push_back(m_stc_ratio);
+	m_objs.push_back(m_sli_slider);
+	m_objs.push_back(m_stc_size);
+	m_objs.push_back(m_sli_size);
 	m_objs.push_back(m_edit_name);
 	m_objs.push_back(m_btn_export);
 	m_objs.push_back(m_stc_name);
@@ -88,6 +112,13 @@ ExportView::ExportView(CWnd* wnd) : VirtualView(wnd), m_yolov2(wnd){
 
 	m_chk_yolov2->check = true;
 	m_chk_ignore_rbox->check = true;
+
+	g_is_rotate = &m_chk_rotate->check;
+	g_is_ignore = &m_chk_ignore_rbox->check;
+	g_export_class_data = &m_list_class->m_data;
+	///DEV
+	m_chk_fasterrcnn->disable = true;
+	m_chk_dlibcnn->disable = true;
 }
 
 
@@ -103,6 +134,59 @@ void ExportView::OnDestroy() {
 
 void ExportView::OnPaint(CDC* pDC) {
 	VirtualView::OnPaint(pDC);
+	int train_ratio = static_cast<int>(m_sli_slider->m_pos * 100);
+	m_stc_ratio->m_text.Format(TEXT("Train : %3d%%, Valid : %3d%%")
+							   , train_ratio
+							   ,100-train_ratio);
+	int size_ratio = static_cast<int>(m_sli_size->m_pos * 100);
+	float sli_size_pos = m_sli_size->m_pos;
+	if (size_ratio == 100) {
+		g_maximum_size = -1;
+		m_stc_size->m_text = TEXT("Original size");
+		m_sli_size->m_pos = 1.0F;
+	} else if (90 <= size_ratio && size_ratio < 100) {
+		g_maximum_size = 3840;
+		m_stc_size->m_text = TEXT("Maximun size : 3840");
+		m_sli_size->m_pos = 0.9F;
+	} else if (80 <= size_ratio && size_ratio < 90) {
+		g_maximum_size = 2560;
+		m_stc_size->m_text = TEXT("Maximun size : 2560");
+		m_sli_size->m_pos = 0.8F;
+	} else if (70 <= size_ratio && size_ratio < 80) {
+		g_maximum_size = 1920;
+		m_stc_size->m_text = TEXT("Maximun size : 1920");
+		m_sli_size->m_pos = 0.7F;
+	} else if (60 <= size_ratio && size_ratio < 70) {
+		g_maximum_size = 1600;
+		m_stc_size->m_text = TEXT("Maximun size : 1600");
+		m_sli_size->m_pos = 0.6F;
+	} else if (50 <= size_ratio && size_ratio < 60) {
+		g_maximum_size = 1280;
+		m_stc_size->m_text = TEXT("Maximun size : 1280");
+		m_sli_size->m_pos = 0.5F;
+	} else if (40 <= size_ratio && size_ratio < 50) {
+		g_maximum_size = 960;
+		m_stc_size->m_text = TEXT("Maximun size : 960");
+		m_sli_size->m_pos = 0.4F;
+	} else if (30 <= size_ratio && size_ratio < 40) {
+		g_maximum_size = 720;
+		m_stc_size->m_text = TEXT("Maximun size : 720");
+		m_sli_size->m_pos = 0.3F;
+	} else if (20 <= size_ratio && size_ratio < 30) {
+		g_maximum_size = 640;
+		m_stc_size->m_text = TEXT("Maximun size : 640");
+		m_sli_size->m_pos = 0.2F;
+	} else if (10 <= size_ratio && size_ratio < 20) {
+		g_maximum_size = 480;
+		m_stc_size->m_text = TEXT("Maximun size : 480");
+		m_sli_size->m_pos = 0.1F;
+	} else if (0 <= size_ratio && size_ratio < 10) {
+		g_maximum_size = 320;
+		m_stc_size->m_text = TEXT("Maximun size : 320");
+		m_sli_size->m_pos = 0.0F;
+	}
+	
+	
 	if (this->isSameClassList() == false) {
 		m_list_class->m_data.assign(g_class_data->size(), std::pair<CString, bool>());
 		std::copy(g_class_data->begin(), g_class_data->end(), m_list_class->m_data.begin());
@@ -119,6 +203,10 @@ void ExportView::OnPaint(CDC* pDC) {
 		m_yolov2.OnPaint(pDC);
 	}
 	WriteDocument();
+	m_sli_size->m_pos = sli_size_pos;
+	if (g_exporting == true) {
+		ShowProgressBar(pDC, this->GetViewRect());
+	}
 }
 void ExportView::OnSetFocus(CWnd* pOldWnd) {
 	VirtualView::OnSetFocus(pOldWnd);
@@ -128,11 +216,42 @@ void ExportView::OnKillFocus(CWnd* pNewWnd) {
 }
 
 void ExportView::OnLButtonDown(UINT nFlags, CPoint point) {
+	if (g_exporting == true)return;
 	VirtualView::OnLButtonDown(nFlags, point);
 	m_list_class->OnLButtonDown();
 	m_edit_name->OnLButtonDown();
+	m_sli_slider->OnLButtonDown();
+	m_sli_size->OnLButtonDown();
 	if (m_btn_export->OnLButtonDown() == M_CLICKED) {
 		///Do...
+		if (m_edit_name->m_text.GetLength() == 0) {
+			this->m_parent->MessageBox(TEXT("Please, Write project name before export"));
+			return;
+		}
+		int sz = static_cast<int>(ceil(13 / m_sli_slider->m_pos));
+		if (g_image_data->size() < sz) {
+			CString msg;
+			msg.Format(TEXT("The number of images should be more than %d."), sz);
+			this->m_parent->MessageBox(msg);
+			return;
+		}
+		CFolderPickerDialog fpd(nullptr, OFN_PATHMUSTEXIST);
+		if (IDOK == fpd.DoModal()) {
+			CString path = fpd.GetPathName();
+			CString type = TEXT("TSpring()");
+			if (m_chk_yolov2->check == true) {
+				type = TEXT("TSpring(YOLOv2)");
+			} else if (m_chk_fasterrcnn->check == true) {
+				type = TEXT("TSpring(FasterRCNN)");
+			} else if (m_chk_dlibcnn->check == true) {
+				type = TEXT("TSpring(dlib-cnn)");
+			}
+			path += TEXT('\\') +type+m_edit_name->m_text;
+			g_project_name= m_edit_name->m_text;
+			g_export_dir = path;
+			g_train_ratio = static_cast<int>(m_sli_slider->m_pos * 100);
+			m_yolov2.Export();
+		}
 	}
 	CPoint rpoint = this->GetMousePoint();
 	int sel=m_list_class->GetElementByPoint(rpoint);
@@ -178,19 +297,25 @@ void ExportView::OnLButtonUp(UINT nFlags, CPoint point) {
 	VirtualView::OnLButtonUp(nFlags, point);
 	m_list_class->OnLButtonUp();
 	m_edit_name->OnLButtonUp();
+	m_sli_slider->OnLButtonUp();
+	m_sli_size->OnLButtonUp();
 }
 void ExportView::OnLButtonDblClk(UINT nFlags, CPoint point) {
+	if (g_exporting == true)return;
 	VirtualView::OnLButtonDblClk(nFlags, point);
 }
 void ExportView::OnRButtonUp(UINT nFlags, CPoint point) {
+	if (g_exporting == true)return;
 	VirtualView::OnRButtonUp(nFlags, point);
 }
 BOOL ExportView::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt) {
+	if (g_exporting == true)return FALSE;
 	VirtualView::OnMouseWheel(nFlags, zDelta, pt);
 	m_list_class->OnMouseWheel(zDelta);
 	return TRUE;
 }
 void ExportView::OnMouseMove(UINT nFlags, CPoint point) {
+	if (g_exporting == true)return;
 	VirtualView::OnMouseMove(nFlags, point);
 	m_list_class->OnMouseMove();
 	for (auto&obj : m_objs) {
@@ -201,10 +326,14 @@ void ExportView::OnMouseMove(UINT nFlags, CPoint point) {
 	}
 }
 void ExportView::OnMouseLeave() {
+	if (g_exporting == true)return;
 	VirtualView::OnMouseLeave();
+	m_sli_slider->OnMouseLeave();
+	m_sli_size->OnMouseLeave();
 }
 
 BOOL ExportView::OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message) {
+	if (g_exporting == true)return FALSE;
 	VirtualView::OnSetCursor(pWnd, nHitTest, message);
 	return TRUE;
 }
@@ -213,16 +342,19 @@ void ExportView::OnSize(UINT nType, int cx, int cy) {
 }
 
 void ExportView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) {
+	if (g_exporting == true)return;
 	VirtualView::OnKeyDown(nChar, nRepCnt, nFlags);
 	m_edit_name->OnKeyDown(nChar);
 }
 
 void ExportView::OnTimer(UINT_PTR nIDEvent) {
+	if (g_exporting == true)return;
 	VirtualView::OnTimer(nIDEvent);
 	m_list_class->OnTimer(nIDEvent);
 	m_edit_name->OnTimer(nIDEvent);
 }
 void ExportView::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags) {
+	if (g_exporting == true)return;
 	VirtualView::OnChar(nChar, nRepCnt, nFlags);
 	if (nChar != VK_RETURN) {
 		if (std::isspace(nChar) == false && nChar!='\\' && nChar!='/' && nChar!=':' && nChar!='?' && nChar!='\"' && nChar!='<' && nChar!='>' && nChar!='|') {
@@ -231,6 +363,7 @@ void ExportView::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags) {
 	}
 }
 LRESULT ExportView::OnComposition(WPARAM wParam, LPARAM lParam) {
+	if (g_exporting == true)return FALSE;
 	VirtualView::OnComposition(wParam, lParam);
 	m_edit_name->OnComposition(wParam, lParam);
 	return 1;

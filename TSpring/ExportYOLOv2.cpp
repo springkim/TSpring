@@ -1,7 +1,677 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "ExportYOLOv2.h"
-void Export(bool is_rotate, bool is_ignore) {
+std::string GetOriginalName(std::string path,std::string sdir,std::string ext) {
+	std::string::size_type slash = path.find_last_of("/\\") + 1;
+	std::string::size_type dot= path.find_last_of(".");
+	std::string pure = path.substr(slash, dot - slash);
+	std::string tmp = pure;
+	std::string test = sdir + tmp + ext;
+	int c = 1;
+	while (ispring::File::FileExist(test) == true) {
+		tmp =pure+ "(" + std::to_string(c) + ")";
+		test = sdir + tmp + ext;
+		c++;
+	}
+	for (size_t i = 0; i < tmp.size(); i++) {
+		if (tmp[i] == ' ') {
+			tmp[i] = '_';
+		}
+	}
+	return tmp;
+}
+void GenerateCFG(ExportYOLOv2* yolov2,std::string sdir) {
+	//make cfg
+	int BATCH = 64;
+	int SUBDIVISION = 64;
+	int WIDTH = yolov2->GetWidth();
+	int HEIGHT = yolov2->GetWidth();
+	int MAX_BATCHES = static_cast<int>(std::max(60000.0, (g_export_class_data->size()*g_train_ratio) / 64.0*360.0));
+	int CLASSES = yolov2->GetClasses();
+	int NUM = yolov2->GetNumOfAnchors();
+	int FILTERS = (CLASSES + 5)*NUM;
+	int RANDOM = yolov2->GetRandom();
+	char* cfg_format = yolov2->GetCFG().first;
+	std::string cfg_name = yolov2->GetCFG().second;
+	static char buffer[65536];
+	std::vector<std::string> images = ispring::File::FileList(sdir + "train/", "*.jpg");
+	std::string ANCHORS = GetAnchors(NUM, WIDTH, images);
+	
+	sprintf_s(buffer,65536, cfg_format, BATCH, SUBDIVISION, HEIGHT, WIDTH, MAX_BATCHES, FILTERS, ANCHORS.c_str(), CLASSES, NUM, RANDOM);
+	///TODO
+	std::fstream fout;	
+	///CFG
+	fout.open(sdir+cfg_name+".cfg", std::ios::out);
+	fout << buffer;
+	fout.close();
+	///DATA
+	std::string prj_name = mspring::String::ToString(g_project_name);
+	fout.open(sdir + prj_name + ".data",std::ios::out);
+	fout << "classes=" << CLASSES << std::endl;
+	fout << "train=train.txt" << std::endl;
+	fout << "valid=valid.txt" << std::endl;
+	fout << "names=" << prj_name << ".names" << std::endl;
+	fout << "backup=backup/";
+	fout.close();
+	///NAMES
+	fout.open(sdir + prj_name + ".names",std::ios::out);
+	for (auto&e : *g_export_class_data) {
+		if (e.second == true) {
+			fout << mspring::String::ToString(e.first) << std::endl;
+		}
+	}
+	fout.close();
+	///BAT
+	fout.open(sdir + "train-" + cfg_name + ".bat", std::ios::out);
+	fout << "cd \"bin\"" << std::endl;
+	fout << "\"YOLOv2_Train_SE.exe\" ../ " << prj_name + ".data " << cfg_name + ".cfg" << std::endl;
+	fout << "cd .." << std::endl;
+	fout << "pause";
+	fout.close();
+}
+std::vector<TagInfo> GetTagInfo(std::string img_path, std::vector<int> table) {
+	std::vector<TagInfo> tag_data;
+	std::string tsp_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsp";
+	std::fstream fin;
+	fin.open(tsp_path, std::ios::in);
+	tag_data.clear();
+	if (fin.is_open() == true) {
+		while (fin.eof() == false) {
+			std::istringstream iss;
+			std::string line;
+			std::getline(fin, line);
+			if (line.empty() == true) {
+				continue;
+			}
+			iss.str(line);
+			int _class;
+			cv::RotatedRect rr;
+			iss >> _class >> rr.center.x >> rr.center.y >> rr.size.width >> rr.size.height >> rr.angle;
+			if (_class != -100) {
+				if (_class >= table.size()) {	//클래스 리스트에 없는 클래스 무시
+					continue;
+				}
+				if (table[_class] == -1) {	//export 하지 않는 클래스이면 무시
+					continue;
+				}
+				tag_data.push_back(TagInfo(table[_class], rr));
+			} else {
+				tag_data.push_back(TagInfo(_class, rr));
+			}
+			
+		}
+	}
+	return tag_data;
+}
+std::vector<int> GetClassTable() {
+	std::vector<int> allow;
+	int i = 0;
+	for (size_t j = 0; j < g_export_class_data->size(); j++) {
+		if (g_export_class_data->at(j).second == true) {
+			allow.push_back(i);
+			i++;
+		} else {
+			allow.push_back(-1);
+		}
+	}
+	return allow;
+}
+std::vector<YOLOBOX> GetYOLOBOX(cv::Mat& img,std::vector<TagInfo> tag_info) {
+	std::vector<YOLOBOX> yolobox;
+	for (auto&e : tag_info) {
+		if (*g_is_ignore == true && e.m_rect.angle != 0) {	//각도 무시일경우 angle이 있으면 무시
+			continue;
+		}
+		if (e.m_class == -100) {
+			continue;
+		}
+		cv::Rect2f rect = e.m_rect.boundingRect2f();
+		YOLOBOX box;
+		box.m_class = e.m_class;
+		box.x = (rect.x + rect.width / 2.0F)/img.cols;
+		box.y = (rect.y + rect.height / 2.0F)/img.rows;
+		box.w = rect.width / img.cols;
+		box.h = rect.height / img.rows;
+		yolobox.push_back(box);
+	}
+	return yolobox;
+}
+std::vector<YOLOBOX> GetExistingYOLOBOX(std::string img_path) {
+	std::string txt_path = img_path.substr(0, img_path.find_last_of('.')) + ".txt";
+	std::fstream fin;
+	std::vector<YOLOBOX> yolobox;
+	fin.open(txt_path, std::ios::in);
+	if (fin.is_open() == false) {
+		ISPRING_VERIFY("File path error");
+	} else {
+		while (fin.eof() == false) {
+			std::string line;
+			std::getline(fin, line);
+			if (line.length() == 0)break;
+			std::istringstream iss;
+			iss.str(line);
+			YOLOBOX box;
+			iss >> box.m_class >> box.x >> box.y >> box.w >> box.h;
+			yolobox.push_back(box);
+		}
+		fin.close();
+	}
+	return yolobox;
+}
+void GenGrayImages(std::vector<std::string>& train_path,std::string dir) {
+	std::vector<std::string> newdata;
+	for (size_t i = 0; i < train_path.size(); i++) {
+		cv::Mat img = cv::imread(train_path[i],cv::IMREAD_GRAYSCALE);
+		std::vector<YOLOBOX> yolobox = GetExistingYOLOBOX(train_path[i]);
+		std::string file_noext = GetOriginalName(train_path[i], dir, ".jpg");
+		std::string file_img = file_noext + ".jpg";
+		std::string file_txt = file_noext + ".txt";
+		cv::imwrite(dir + file_img, img);
+		std::fstream fout;
+		fout.open(dir + file_txt, std::ios::out);
+		if (fout.is_open() == false) {
+			ISPRING_VERIFY("file open fail");
+		} else {
+			for (size_t j = 0; j < yolobox.size(); j++) {
+				if (j != 0) {
+					fout << std::endl;
+				}
+				fout << yolobox[j].m_class << " " << yolobox[j].x << " " << yolobox[j].y << " " << yolobox[j].w << " " << yolobox[j].h;
+			}
+			fout.close();
+		}
+		newdata.push_back(dir + file_img);
+		g_progress = g_complete_images++ * 94 / g_total_images + 5;
+	}
+	for (auto&e : newdata) {
+		train_path.push_back(e);
+	}
+}
+void GenSaltNPepperImages(std::vector<std::string>& train_path, std::string dir) {
+	std::vector<std::string> newdata;
+	for (size_t i = 0; i < train_path.size(); i++) {
+		cv::Mat img = cv::imread(train_path[i], cv::IMREAD_COLOR);
 
+		int num_of_noise_pixels = (int)((double)(img.rows * img.cols * 3)*0.003);
+		for (int i = 0; i < num_of_noise_pixels; i++) {
+			int r = rand() % img.rows;  // noise로 바꿀 행을 임의로 선택
+			int c = rand() % img.cols;  // noise로 바꿀 열을 임의로 선택
+			if (rand() % 2) {
+				img.at<cv::Vec3b>(r, c) = cv::Vec3b(255, 255, 255);
+			} else {
+				img.at<cv::Vec3b>(r, c) = cv::Vec3b(0, 0, 0);
+			}
+		}
+		std::vector<YOLOBOX> yolobox = GetExistingYOLOBOX(train_path[i]);
+		std::string file_noext = GetOriginalName(train_path[i], dir, ".jpg");
+		std::string file_img = file_noext + ".jpg";
+		std::string file_txt = file_noext + ".txt";
+		cv::imwrite(dir + file_img, img);
+		std::fstream fout;
+		fout.open(dir + file_txt, std::ios::out);
+		if (fout.is_open() == false) {
+			ISPRING_VERIFY("file open fail");
+		} else {
+			for (size_t j = 0; j < yolobox.size(); j++) {
+				if (j != 0) {
+					fout << std::endl;
+				}
+				fout << yolobox[j].m_class << " " << yolobox[j].x << " " << yolobox[j].y << " " << yolobox[j].w << " " << yolobox[j].h;
+			}
+			fout.close();
+		}
+		newdata.push_back(dir + file_img);
+		g_progress = g_complete_images++ * 94 / g_total_images + 5;
+	}
+	for (auto&e : newdata) {
+		train_path.push_back(e);
+	}
+}
+void GenBlurImages(std::vector<std::string>& train_path, std::string dir) {
+	std::vector<std::string> newdata;
+	for (size_t i = 0; i < train_path.size(); i++) {
+		cv::Mat img = cv::imread(train_path[i], cv::IMREAD_COLOR);
+		cv::blur(img, img, cv::Size(5, 5));
+		std::vector<YOLOBOX> yolobox = GetExistingYOLOBOX(train_path[i]);
+		std::string file_noext = GetOriginalName(train_path[i], dir, ".jpg");
+		std::string file_img = file_noext + ".jpg";
+		std::string file_txt = file_noext + ".txt";
+		cv::imwrite(dir + file_img, img);
+		std::fstream fout;
+		fout.open(dir + file_txt, std::ios::out);
+		if (fout.is_open() == false) {
+			ISPRING_VERIFY("file open fail");
+		} else {
+			for (size_t j = 0; j < yolobox.size(); j++) {
+				if (j != 0) {
+					fout << std::endl;
+				}
+				fout << yolobox[j].m_class << " " << yolobox[j].x << " " << yolobox[j].y << " " << yolobox[j].w << " " << yolobox[j].h;
+			}
+			fout.close();
+		}
+		newdata.push_back(dir + file_img);
+		g_progress = g_complete_images++ * 94 / g_total_images + 5;
+	}
+	for (auto&e : newdata) {
+		train_path.push_back(e);
+	}
+}
+void GenFlipLRImages(std::vector<std::string>& train_path, std::string dir) {
+	std::vector<std::string> newdata;
+	for (size_t i = 0; i < train_path.size(); i++) {
+		cv::Mat img = cv::imread(train_path[i], cv::IMREAD_COLOR);
+		
+		cv::flip(img, img, 1);
+
+		std::vector<YOLOBOX> yolobox = GetExistingYOLOBOX(train_path[i]);
+		for (auto&box : yolobox) {
+			box.x = 1.0F - box.x;
+		}
+
+		std::string file_noext = GetOriginalName(train_path[i], dir, ".jpg");
+		std::string file_img = file_noext + ".jpg";
+		std::string file_txt = file_noext + ".txt";
+		cv::imwrite(dir + file_img, img);
+		std::fstream fout;
+		fout.open(dir + file_txt, std::ios::out);
+		if (fout.is_open() == false) {
+			ISPRING_VERIFY("file open fail");
+		} else {
+			for (size_t j = 0; j < yolobox.size(); j++) {
+				if (j != 0) {
+					fout << std::endl;
+				}
+				fout << yolobox[j].m_class << " " << yolobox[j].x << " " << yolobox[j].y << " " << yolobox[j].w << " " << yolobox[j].h;
+			}
+			fout.close();
+		}
+		newdata.push_back(dir + file_img);
+		g_progress = g_complete_images++ * 94 / g_total_images + 5;
+	}
+	for (auto&e : newdata) {
+		train_path.push_back(e);
+	}
+}
+void GenFlipTBImages(std::vector<std::string>& train_path, std::string dir) {
+	std::vector<std::string> newdata;
+	for (size_t i = 0; i < train_path.size(); i++) {
+		cv::Mat img = cv::imread(train_path[i], cv::IMREAD_COLOR);
+
+		cv::flip(img, img, 0);
+
+		std::vector<YOLOBOX> yolobox = GetExistingYOLOBOX(train_path[i]);
+		for (auto&box : yolobox) {
+			box.y = 1.0F - box.y;
+		}
+
+		std::string file_noext = GetOriginalName(train_path[i], dir, ".jpg");
+		std::string file_img = file_noext + ".jpg";
+		std::string file_txt = file_noext + ".txt";
+		cv::imwrite(dir + file_img, img);
+		std::fstream fout;
+		fout.open(dir + file_txt, std::ios::out);
+		if (fout.is_open() == false) {
+			ISPRING_VERIFY("file open fail");
+		} else {
+			for (size_t j = 0; j < yolobox.size(); j++) {
+				if (j != 0) {
+					fout << std::endl;
+				}
+				fout << yolobox[j].m_class << " " << yolobox[j].x << " " << yolobox[j].y << " " << yolobox[j].w << " " << yolobox[j].h;
+			}
+			fout.close();
+		}
+		newdata.push_back(dir + file_img);
+		g_progress = g_complete_images++ * 94 / g_total_images + 5;
+	}
+	for (auto&e : newdata) {
+		train_path.push_back(e);
+	}
+}
+void GenImages(ExportYOLOv2* yolov2,std::string sdir) {
+	std::string dir_train = sdir + "train\\";
+	std::string dir_valid = sdir + "valid\\";
+	std::string dir_backup = sdir + "backup\\";
+	std::string dir_bin = sdir + "bin\\";
+	ispring::File::DirectoryMake(dir_train);
+	ispring::File::DirectoryMake(dir_valid);
+	ispring::File::DirectoryMake(dir_backup);
+	ispring::File::DirectoryMake(dir_bin);
+
+	ispring::Web::Download("https://www.dropbox.com/s/3ny3j6ab73scu2g/YOLOv2_Train_SE.exe?dl=1", dir_bin + "YOLOv2_Train_SE.exe");
+	g_progress = 2;
+	ispring::Web::Download("https://www.dropbox.com/s/7g9j1bwgietdiht/cudnn64_5.dll?dl=1", dir_bin + "cudnn64_5.dll");
+	g_progress = 3;
+	std::vector<int> table = GetClassTable();
+
+	std::vector<std::string> img_original;
+	for (size_t i = 0; i < g_image_data->size(); i++) {
+		std::string file = mspring::String::ToString(g_image_data->at(i).first);
+		img_original.push_back(file);
+	}
+	g_progress = 4;
+	std::vector<std::string> img_train, img_valid;
+	{	///suffle
+		srand(921126);
+		for (size_t i = 0; i < img_original.size(); i++) {
+			int idx = rand() % img_original.size();
+			std::swap(img_original[i], img_original[idx]);
+		}
+	}
+	g_progress = 5;
+	int mul = 1;
+	if (yolov2->m_chk_noise_gray->check == true) {
+		mul *= 2;
+	}
+	if (yolov2->m_chk_noise_dot->check == true) {
+		mul *= 2;
+	}
+	if (yolov2->m_chk_noise_blur->check == true) {
+		mul *= 2;
+	}
+	if (yolov2->m_chk_noise_flipLR->check == true) {
+		mul *= 2;
+	}
+	if (yolov2->m_chk_noise_flipTB->check == true) {
+		mul *= 2;
+	}
+	
+	
+	{	///seperate train, valid
+		size_t i = 0;
+		for (; i < img_original.size()*(g_train_ratio / 100.0); i++) {
+			img_train.push_back(img_original[i]);
+		}
+		for (; i < img_original.size(); i++) {
+			img_valid.push_back(img_original[i]);
+		}
+	}
+	g_total_images = mul*img_train.size() + img_valid.size();
+	g_complete_images = 0;
+	g_progress = g_complete_images*94 / g_total_images+5;
+	std::vector<std::string> train_path;
+	std::vector<std::string> valid_path;
+	try{	///실제로 이미지를 추출(train)
+		for (size_t i = 0; i < img_train.size(); i++) {
+			cv::Mat img = cv::imread(img_train[i]);
+			std::vector<TagInfo> tag = GetTagInfo(img_train[i], table);
+			for (auto&_tag : tag) {	//ignore box 칠하기
+				if (_tag.m_class == -100) {
+					cv::rectangle(img, _tag.m_rect.boundingRect(), cv::Scalar(0, 0, 0),CV_FILLED);
+				}
+			}
+			if (*g_is_rotate == true) {
+				//angle은 무조건 양수
+				for (size_t j = 0; j < 180; j++) {
+					std::vector<TagInfo> rtag;
+					for (size_t k = 0; k < tag.size(); k++) {
+						if (tag[k].m_class != -100) {
+							if (j == static_cast<int>(360 + tag[k].m_rect.angle) % 180) {
+								rtag.push_back(tag[k]);
+							}
+						}
+					}
+					if (rtag.empty() == false) {
+						std::ostringstream oss;
+						oss.width(4);
+						oss.fill('0');
+						oss << j;
+						cv::Mat rimg;
+						cv::Point out;
+						rimg = ispring::CV::ImageRotateOuter(img, static_cast<double>(j),&out);
+						cv::Point mid(img.cols / 2, img.rows / 2);
+						for (size_t k = 0; k < rtag.size(); k++) {
+							cv::Point2f pts[4];
+							std::vector<cv::Point> ptsi(4);
+							rtag[k].m_rect.points(pts);
+							for (size_t t = 0; t < 4; t++) {
+								cv::Point2d after;
+								double rad = -static_cast<double>(j)*CV_PI / 180.0;
+								after.x = (pts[t].x - mid.x)*cos(rad) - (pts[t].y - mid.y)*sin(rad) + mid.x;
+								after.y = (pts[t].x - mid.x)*sin(rad) + (pts[t].y - mid.y)*cos(rad) + mid.y;
+								after.x += out.x;
+								after.y += out.y;
+								ptsi[t].x = static_cast<int>(after.x);
+								ptsi[t].y = static_cast<int>(after.y);
+							}
+			
+							cv::Rect rect=cv::boundingRect(ptsi);
+							rtag[k].m_rect.angle = 0;
+							rtag[k].m_rect.center.x = rect.x + rect.width / 2.0F;
+							rtag[k].m_rect.center.y = rect.y + rect.height / 2.0F;
+							rtag[k].m_rect.size.width = static_cast<float>(rect.width);
+							rtag[k].m_rect.size.height = static_cast<float>(rect.height);
+							
+							//cv::rectangle(rimg, rtag[k].m_rect.boundingRect(), cv::Scalar(0, 0, 255), 2);
+						}
+
+						std::vector<YOLOBOX> yolobox = GetYOLOBOX(rimg, rtag);
+						std::string file_noext = GetOriginalName(img_train[i], dir_train, oss.str() + ".jpg") + oss.str();
+						std::string file_img = file_noext + ".jpg";
+						std::string file_txt = file_noext + ".txt";
+						if (g_maximum_size != -1) {
+							if (rimg.cols > g_maximum_size) {
+								cv::resize(rimg, rimg, cv::Size(static_cast<int>(g_maximum_size), static_cast<int>(rimg.rows * g_maximum_size / rimg.cols)));
+							}
+						}
+						cv::imwrite(dir_train + file_img, rimg);
+						std::fstream fout;
+						fout.open(dir_train + file_txt, std::ios::out);
+						if (fout.is_open() == false) {
+							ISPRING_VERIFY("file open fail");
+						} else {
+							for (size_t k = 0; k < yolobox.size(); k++) {
+								if (k != 0) {
+									fout << std::endl;
+								}
+								fout << yolobox[k].m_class << " " << yolobox[k].x << " " << yolobox[k].y << " " << yolobox[k].w << " " << yolobox[k].h;
+							}
+							fout.close();
+						}
+						train_path.push_back(dir_train + file_img);
+					}
+				}
+			} else {
+				std::vector<YOLOBOX> yolobox = GetYOLOBOX(img, tag);
+				std::string file_noext = GetOriginalName(img_train[i], dir_train, ".jpg");
+				std::string file_img = file_noext + ".jpg";
+				std::string file_txt = file_noext + ".txt";
+				if (g_maximum_size != -1) {
+					if (img.cols > g_maximum_size) {
+						cv::resize(img, img, cv::Size(static_cast<int>(g_maximum_size), static_cast<int>(img.rows * g_maximum_size / img.cols)));
+					}
+				}
+				cv::imwrite(dir_train + file_img, img);
+				std::fstream fout;
+				fout.open(dir_train + file_txt, std::ios::out);
+				if (fout.is_open() == false) {
+					ISPRING_VERIFY("file open fail");
+				} else {
+					for (size_t j = 0; j < yolobox.size(); j++) {
+						if (j != 0) {
+							fout << std::endl;
+						}
+						fout << yolobox[j].m_class << " " << yolobox[j].x << " " << yolobox[j].y << " " << yolobox[j].w << " " << yolobox[j].h;
+					}
+					fout.close();
+				}
+				train_path.push_back(dir_train + file_img);
+			}
+			g_progress = g_complete_images++ * 94 / g_total_images + 5;
+		}
+		if (yolov2->m_chk_noise_gray->check == true) {
+			GenGrayImages(train_path, dir_train);
+		}
+		if (yolov2->m_chk_noise_dot->check == true) {
+			GenSaltNPepperImages(train_path, dir_train);
+		}
+		if (yolov2->m_chk_noise_blur->check == true) {
+			GenBlurImages(train_path, dir_train);
+		}
+		if (yolov2->m_chk_noise_flipLR->check == true) {
+			GenFlipLRImages(train_path, dir_train);
+		}
+		if (yolov2->m_chk_noise_flipTB->check == true) {
+			GenFlipTBImages(train_path, dir_train);
+		}
+		std::fstream fout(sdir + "train.txt",std::ios::out);
+		for(size_t i=0;i<train_path.size();i++){
+			if (i != 0) {
+				fout << std::endl;
+			}
+			std::string::size_type slash = train_path[i].find_last_of("\\/") + 1;
+			std::string pure = train_path[i].substr(slash, train_path[i].length() - slash);
+			pure = "train/" + pure;
+			fout << pure;
+		}
+		fout.close();
+	} catch (std::exception&e) {
+		ISPRING_VERIFY(e.what());
+	}
+	try {
+		for (size_t i = 0; i < img_valid.size(); i++) {
+			cv::Mat img = cv::imread(img_valid[i]);
+			std::vector<TagInfo> tag = GetTagInfo(img_valid[i], table);
+
+			if (*g_is_rotate == true) {
+				//angle은 무조건 양수
+				for (size_t j = 0; j < 180; j++) {
+					std::vector<TagInfo> rtag;
+					for (size_t k = 0; k < tag.size(); k++) {
+						if (tag[k].m_class != -100) {
+							if (j == static_cast<int>(360 + tag[k].m_rect.angle) % 180) {
+								rtag.push_back(tag[k]);
+							}
+						}
+					}
+					if (rtag.empty() == false) {
+						std::ostringstream oss;
+						oss.width(4);
+						oss.fill('0');
+						oss << j;
+						cv::Mat rimg;
+						cv::Point out;
+						rimg = ispring::CV::ImageRotateOuter(img, static_cast<double>(j), &out);
+						cv::Point mid(img.cols / 2, img.rows / 2);
+						for (size_t k = 0; k < rtag.size(); k++) {
+							cv::Point2f pts[4];
+							std::vector<cv::Point> ptsi(4);
+							rtag[k].m_rect.points(pts);
+							for (size_t t = 0; t < 4; t++) {
+								cv::Point2d after;
+								double rad = -static_cast<double>(j)*CV_PI / 180.0;
+								after.x = (pts[t].x - mid.x)*cos(rad) - (pts[t].y - mid.y)*sin(rad) + mid.x;
+								after.y = (pts[t].x - mid.x)*sin(rad) + (pts[t].y - mid.y)*cos(rad) + mid.y;
+								after.x += out.x;
+								after.y += out.y;
+								ptsi[t].x = static_cast<int>(after.x);
+								ptsi[t].y = static_cast<int>(after.y);
+							}
+
+							cv::Rect rect = cv::boundingRect(ptsi);
+							rtag[k].m_rect.angle = 0;
+							rtag[k].m_rect.center.x = rect.x + rect.width / 2.0F;
+							rtag[k].m_rect.center.y = rect.y + rect.height / 2.0F;
+							rtag[k].m_rect.size.width = static_cast<float>(rect.width);
+							rtag[k].m_rect.size.height = static_cast<float>(rect.height);
+						}
+
+						std::vector<YOLOBOX> yolobox = GetYOLOBOX(rimg, rtag);
+						std::string file_noext = GetOriginalName(img_valid[i], dir_valid, oss.str() + ".jpg") + oss.str();
+						std::string file_img = file_noext + ".jpg";
+						std::string file_txt = file_noext + ".txt";
+						if (g_maximum_size != -1) {
+							if (rimg.cols > g_maximum_size) {
+								cv::resize(rimg, rimg, cv::Size(static_cast<int>(g_maximum_size), static_cast<int>(rimg.rows * g_maximum_size / rimg.cols)));
+							}
+						}
+						cv::imwrite(dir_valid + file_img, rimg);
+						std::fstream fout;
+						fout.open(dir_valid + file_txt, std::ios::out);
+						if (fout.is_open() == false) {
+							ISPRING_VERIFY("file open fail");
+						} else {
+							for (size_t k = 0; k < yolobox.size(); k++) {
+								if (k != 0) {
+									fout << std::endl;
+								}
+								fout << yolobox[k].m_class << " " << yolobox[k].x << " " << yolobox[k].y << " " << yolobox[k].w << " " << yolobox[k].h;
+							}
+							fout.close();
+						}
+						valid_path.push_back(dir_valid + file_img);
+					}
+				}
+			} else {
+				std::vector<YOLOBOX> yolobox = GetYOLOBOX(img, tag);
+				std::string file_noext = GetOriginalName(img_valid[i], dir_valid, ".jpg");
+				std::string file_img = file_noext + ".jpg";
+				std::string file_txt = file_noext + ".txt";
+				if (g_maximum_size != -1) {
+					if (img.cols > g_maximum_size) {
+						cv::resize(img, img, cv::Size(g_maximum_size, img.rows * g_maximum_size / img.cols));
+					}
+				}
+				cv::imwrite(dir_valid + file_img, img);
+				std::fstream fout;
+				fout.open(dir_valid + file_txt, std::ios::out);
+				if (fout.is_open() == false) {
+					ISPRING_VERIFY("file open fail");
+				} else {
+					for (size_t j = 0; j < yolobox.size(); j++) {
+						if (j != 0) {
+							fout << std::endl;
+						}
+						fout << yolobox[j].m_class << " " << yolobox[j].x << " " << yolobox[j].y << " " << yolobox[j].w << " " << yolobox[j].h;
+					}
+					fout.close();
+				}
+				valid_path.push_back(dir_valid + file_img);
+			}
+			g_progress = g_complete_images++ * 94 / g_total_images + 5;
+		}
+		std::fstream fout(sdir + "valid.txt", std::ios::out);
+		for (size_t i = 0; i<valid_path.size(); i++) {
+			if (i != 0) {
+				fout << std::endl;
+			}
+			std::string::size_type slash = valid_path[i].find_last_of("\\/") + 1;
+			std::string pure = valid_path[i].substr(slash, valid_path[i].length() - slash);
+			pure = "valid/" + pure;
+			fout << pure;
+		}
+		fout.close();
+	} catch (std::exception&e) {
+		ISPRING_VERIFY(e.what());
+	}
+	g_complete_images = g_total_images;
+	GenerateCFG(yolov2, sdir);
+
+	g_progress = 100;
+}
+UINT ExportThread(void* param) {
+	ExportYOLOv2* yolov2 = reinterpret_cast<ExportYOLOv2*>(param);
+	std::vector<std::pair<CString, bool>>& _images = *g_image_data;
+	//========================================
+	std::string sdir = mspring::String::ToString(g_export_dir);
+	if (sdir.back() != '/' && sdir.back() != '\\') {
+		sdir.push_back('\\');
+	}
+	ispring::File::DirectoryMake(sdir);
+	//==============================
+	g_progress = 1;
+
+	GenImages(yolov2, sdir);
+	
+	g_exporting = false;
+	//::MessageBoxA(NULL, "Finish", "Success", MB_OK);
+	return 1;
+}
+void ExportYOLOv2::Export() {
+	g_progress = 0;
+	g_exporting = true;
+	AfxGetMainWnd()->SetTimer(7777, 20,nullptr);
+	::AfxBeginThread(ExportThread, (void*)this);
 }
 
 ExportYOLOv2::ExportYOLOv2(CWnd* wnd):VirtualView(wnd) {

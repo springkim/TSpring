@@ -1,5 +1,6 @@
 #pragma once
 #include<deque>
+
 #include "mspring/view.h"
 #include"mspring/control.h"
 #include"ExportYOLOv2.h"
@@ -41,7 +42,11 @@ public:
 	MEdit* m_edit_name;
 	MButton* m_btn_export;
 	MStatic* m_stc_name;
+	MStatic* m_stc_ratio;
+	MSlider* m_sli_slider;
 
+	MStatic* m_stc_size;
+	MSlider* m_sli_size;
 
 	std::deque<MStatic*> m_doc;
 

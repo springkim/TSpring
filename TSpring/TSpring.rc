@@ -85,17 +85,14 @@ BEGIN
         MENUITEM "Clear Images",                ID_FILE_CLEARIMAGES
         MENUITEM "Exit(&X)",                    ID_APP_EXIT
     END
-    POPUP "편집(&E)"
+    POPUP "Edit(&E)"
     BEGIN
-        MENUITEM "실행 취소(&U)\tCtrl+Z",           ID_EDIT_UNDO
-        MENUITEM SEPARATOR
-        MENUITEM "잘라내기(&T)\tCtrl+X",            ID_EDIT_CUT
-        MENUITEM "복사(&C)\tCtrl+C",              ID_EDIT_COPY
-        MENUITEM "붙여넣기(&P)\tCtrl+V",            ID_EDIT_PASTE
+        MENUITEM "Edit mode",                   ID_EDIT_EDITMODE
+        MENUITEM "Tracking mode",               ID_EDIT_TRACKINGMODE
     END
-    POPUP "도움말(&H)"
+    POPUP "Help(&H)"
     BEGIN
-        MENUITEM "TSpring 정보(&A)...",           ID_APP_ABOUT
+        MENUITEM "TSpring information(&A)...",  ID_APP_ABOUT
     END
 END
 
@@ -125,15 +122,16 @@ END
 // Dialog
 //
 
-IDD_ABOUTBOX DIALOGEX 0, 0, 170, 62
+IDD_ABOUTBOX DIALOGEX 0, 0, 248, 87
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "TSpring 정보"
+CAPTION "TSpring information"
 FONT 9, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
-    ICON            IDR_MAINFRAME,IDC_STATIC,14,14,21,20
-    LTEXT           "TSpring, 버전 1.0",IDC_STATIC,42,14,114,8,SS_NOPREFIX
-    LTEXT           "Copyright (C) 2017",IDC_STATIC,42,26,114,8
-    DEFPUSHBUTTON   "확인",IDOK,113,41,50,14,WS_GROUP
+    LTEXT           "TSpring, Version 1.0",IDC_STATIC,19,15,114,8,SS_NOPREFIX
+    LTEXT           "Copyright (C) 2017 kimbomm. All rights reserved.",IDC_STATIC,19,54,212,8
+    DEFPUSHBUTTON   "Close",IDOK,191,66,50,14,WS_GROUP
+    LTEXT           "https://github.com/springkim/TSpring",IDC_STATIC,19,38,169,8,SS_NOPREFIX
+    CONTROL         IDB_TSPRING,IDC_STATIC,"Static",SS_BITMAP,193,15,37,37
 END
 
 
@@ -157,7 +155,7 @@ VS_VERSION_INFO VERSIONINFO
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "041204B0"
+        BLOCK "041204b0"
         BEGIN
             VALUE "CompanyName", "TODO: <회사 이름>"
             VALUE "FileDescription", "TSpring"
@@ -187,9 +185,9 @@ BEGIN
     IDD_ABOUTBOX, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 163
+        RIGHTMARGIN, 241
         TOPMARGIN, 7
-        BOTTOMMARGIN, 55
+        BOTTOMMARGIN, 80
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -211,6 +209,10 @@ IDB_UNKNOWN             BITMAP                  "res\\unknown.bmp"
 IDB_UNKNOWN_RED         BITMAP                  "res\\unknown_red.bmp"
 
 IDB_UNKNOWN_BLUE        BITMAP                  "res\\unknown_blue.bmp"
+
+IDB_TSPRING             BITMAP                  "res\\TSpring.bmp"
+
+IDB_USAGE               BITMAP                  "res\\TSpring_Usage.bmp"
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -577,6 +579,17 @@ IDC_CURSOR178           CURSOR                  "res\\cursor\\resize_177.cur"
 IDC_CURSOR179           CURSOR                  "res\\cursor\\resize_178.cur"
 
 IDC_CURSOR180           CURSOR                  "res\\cursor\\resize_179.cur"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_ABOUTBOX AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
 
 
 /////////////////////////////////////////////////////////////////////////////

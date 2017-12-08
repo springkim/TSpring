@@ -1,2 +1,4 @@
 .vs/
 3rdparty/
+*.db
+ipch/

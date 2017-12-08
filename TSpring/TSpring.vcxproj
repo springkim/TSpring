@@ -110,8 +110,13 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="cfg_darknet19.h" />
+    <ClInclude Include="cfg_darknet_reference.h" />
+    <ClInclude Include="cfg_densenet201.h" />
+    <ClInclude Include="cfg_resnet50.h" />
     <ClInclude Include="ExportView.h" />
     <ClInclude Include="ExportYOLOv2.h" />
+    <ClInclude Include="gen_anchors.h" />
     <ClInclude Include="ListView.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="repository.h" />
@@ -507,7 +512,10 @@
     <Image Include="res\focus.png" />
     <Image Include="res\maximize.bmp" />
     <Image Include="res\minimize.bmp" />
+    <Image Include="res\TSpring.bmp" />
     <Image Include="res\TSpring.ico" />
+    <Image Include="res\TSpring.png" />
+    <Image Include="res\TSpring_Usage.bmp" />
     <Image Include="res\unknown.bmp" />
     <Image Include="res\unknown_blue.bmp" />
     <Image Include="res\unknown_red.bmp" />

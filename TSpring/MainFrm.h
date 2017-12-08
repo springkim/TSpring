@@ -183,6 +183,9 @@ public:
 	afx_msg BOOL OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message);
 	afx_msg void OnDestroy();
 	afx_msg void OnFileClearimages();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnEditEditmode();
+	afx_msg void OnEditTrackingmode();
 };
 
 

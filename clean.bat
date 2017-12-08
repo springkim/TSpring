@@ -1,4 +1,5 @@
 call :SafeRMDIR "x64"
+call :SafeRMDIR "Debug"
 call :SafeRMDIR "TSpring\x64"
 exit /b
 :SafeDEL

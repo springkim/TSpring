@@ -77,6 +77,8 @@ ListView::ListView(CWnd* wnd) : VirtualView(wnd) {
 
 	m_chk_rectangle->check = true;
 	m_chk_detection->check = true;
+	///DEV
+	m_chk_segmentation->disable = true;
 }
 
 
@@ -97,9 +99,13 @@ void ListView::OnPaint(CDC* pDC) {
 	static bool init = true;
 	if (init == true) {
 		init = false;
-		this->m_parent->SetTimer(MOUSE_LEAVE_TIMER_ID, 5000, nullptr);
+		this->m_parent->SetTimer(MOUSE_LEAVE_TIMER_ID, 3000, nullptr);
 	}
 	m_list_image->OnPaint(pDC);
+	if (m_list_image->m_data.size() == 0) {
+		CRect rect=m_list_image->m_rect.GetRect(this->GetViewRect());
+		DrawBitmap(pDC, rect, IDB_USAGE);
+	} 
 	m_list_class->OnPaint(pDC);
 	m_edit_class->OnPaint(pDC);
 	m_btn_add_class->OnPaint(pDC);
@@ -135,6 +141,9 @@ void ListView::OnPaint(CDC* pDC) {
 	m_stc_image->OnPaint(pDC);
 	m_stc_class->m_text.Format(TEXT("%d classes are ready"), m_list_class->m_data.size());
 	m_stc_class->OnPaint(pDC);
+	if (g_exporting == true) {
+		ShowProgressBar(pDC, this->GetViewRect());
+	}
 }
 void ListView::OnSetFocus(CWnd* pOldWnd) {
 	VirtualView::OnSetFocus(pOldWnd);
@@ -144,6 +153,7 @@ void ListView::OnKillFocus(CWnd* pNewWnd) {
 }
 
 void ListView::OnLButtonDown(UINT nFlags, CPoint point) {
+	if (g_exporting == true)return;
 	VirtualView::OnLButtonDown(nFlags, point);
 	m_list_image->OnLButtonDown();
 	m_list_class->OnLButtonDown();
@@ -259,6 +269,7 @@ void ListView::OnLButtonDown(UINT nFlags, CPoint point) {
 	}
 }
 void ListView::OnLButtonUp(UINT nFlags, CPoint point) {
+	if (g_exporting == true)return;
 	VirtualView::OnLButtonUp(nFlags, point);
 	m_list_image->OnLButtonUp();
 	m_list_class->OnLButtonUp();
@@ -267,9 +278,11 @@ void ListView::OnLButtonUp(UINT nFlags, CPoint point) {
 	m_btn_load_class->OnLButtonUp();
 }
 void ListView::OnLButtonDblClk(UINT nFlags, CPoint point) {
+	if (g_exporting == true)return;
 	VirtualView::OnLButtonDblClk(nFlags, point);
 }
 void ListView::OnRButtonDown(UINT nFlags, CPoint point) {
+	if (g_exporting == true)return;
 	VirtualView::OnRButtonDown(nFlags, point);
 	m_list_image->OnRButtonDown();
 	m_list_class->OnRButtonDown();
@@ -278,6 +291,7 @@ void ListView::OnRButtonDown(UINT nFlags, CPoint point) {
 	m_btn_load_class->OnRButtonDown();
 }
 void ListView::OnRButtonUp(UINT nFlags, CPoint point) {
+	if (g_exporting == true)return;
 	VirtualView::OnRButtonUp(nFlags, point);
 	m_list_image->OnRButtonUp();
 	m_list_class->OnRButtonUp();
@@ -337,6 +351,7 @@ void ListView::OnRButtonUp(UINT nFlags, CPoint point) {
 
 }
 BOOL ListView::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt) {
+	if (g_exporting == true)return TRUE;
 	VirtualView::OnMouseWheel(nFlags, zDelta, pt);
 	m_list_image->OnMouseWheel(zDelta);
 	m_list_class->OnMouseWheel(zDelta);
@@ -346,6 +361,7 @@ BOOL ListView::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt) {
 	return TRUE;
 }
 void ListView::OnMouseMove(UINT nFlags, CPoint point) {
+	if (g_exporting == true)return;
 	VirtualView::OnMouseMove(nFlags, point);
 	m_list_image->OnMouseMove();
 	m_list_class->OnMouseMove();
@@ -363,6 +379,7 @@ void ListView::OnMouseMove(UINT nFlags, CPoint point) {
 	}
 }
 void ListView::OnMouseLeave() {
+	if (g_exporting == true)return;
 	VirtualView::OnMouseLeave();
 	m_list_image->OnMouseLeave();
 	m_list_class->OnMouseLeave();
@@ -380,6 +397,7 @@ void ListView::OnSize(UINT nType, int cx, int cy) {
 }
 
 void ListView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) {
+	if (g_exporting == true)return;
 	VirtualView::OnKeyDown(nChar, nRepCnt, nFlags);
 	m_list_image->OnKeyDown(nChar);
 	m_list_class->OnKeyDown(nChar);
@@ -389,6 +407,7 @@ void ListView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) {
 }
 
 void ListView::OnTimer(UINT_PTR nIDEvent) {
+	if (g_exporting == true)return;
 	VirtualView::OnTimer(nIDEvent);
 	m_list_image->OnTimer(nIDEvent);
 	m_list_class->OnTimer(nIDEvent);
@@ -396,27 +415,11 @@ void ListView::OnTimer(UINT_PTR nIDEvent) {
 	m_btn_add_class->OnTimer(nIDEvent);
 	m_btn_load_class->OnTimer(nIDEvent);
 	if (nIDEvent == MOUSE_LEAVE_TIMER_ID) {
-		for (auto&e : m_list_image->m_data) {
-			std::string img_path = mspring::String::ToString(e.first);
-			if (m_chk_detection->check == true) {
-				std::string tsp_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsp";
-				if (ispring::File::FileExist(tsp_path) == true) {
-					e.second = true;
-				} else {
-					e.second = false;
-				}
-			} else if (m_chk_segmentation->check == true) {
-				std::string tsps_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsps";
-				if (ispring::File::FileExist(tsps_path) == true) {
-					e.second = true;
-				} else {
-					e.second = false;
-				}
-			}
-		}
+		IdentifyTagInfo();
 	}
 }
 void ListView::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags) {
+	if (g_exporting == true)return;
 	VirtualView::OnChar(nChar, nRepCnt, nFlags);
 	m_list_image->OnChar(nChar);
 	m_list_class->OnChar(nChar);
@@ -439,6 +442,7 @@ void ListView::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags) {
 	m_btn_load_class->OnChar(nChar);
 }
 LRESULT ListView::OnComposition(WPARAM wParam, LPARAM lParam) {
+	if (g_exporting == true)return FALSE;
 	VirtualView::OnComposition(wParam, lParam);
 	m_edit_class->OnComposition(wParam, lParam);
 	return 1;

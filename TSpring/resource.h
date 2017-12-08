@@ -191,16 +191,21 @@
 #define IDC_CURSOR178                   681
 #define IDC_CURSOR179                   682
 #define IDC_CURSOR180                   683
+#define IDB_TSPRING                     686
+#define IDB_BITMAP1                     687
+#define IDB_USAGE                       687
 #define ID_FILE_OPENIMAGES              32771
 #define ID_FILE_OPENIMAGEFOLDER         32772
 #define ID_FILE_CLEARIMAGES             32773
+#define ID_EDIT_EDITMODE                32774
+#define ID_EDIT_TRACKINGMODE            32775
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        684
-#define _APS_NEXT_COMMAND_VALUE         32774
+#define _APS_NEXT_RESOURCE_VALUE        688
+#define _APS_NEXT_COMMAND_VALUE         32776
 #define _APS_NEXT_CONTROL_VALUE         1000
 #define _APS_NEXT_SYMED_VALUE           310
 #endif

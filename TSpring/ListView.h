@@ -8,6 +8,7 @@
 #include<afxstr.h>
 
 #include"repository.h"
+#include"resource.h"
 
 class ListView :public VirtualView {
 	const int MOUSE_LEAVE_TIMER_ID = 0x11110005;
@@ -42,6 +43,26 @@ public:
 public:
 	ListView(CWnd* wnd);
 	~ListView();
+	void IdentifyTagInfo() {
+		for (auto&e : m_list_image->m_data) {
+			std::string img_path = mspring::String::ToString(e.first);
+			if (m_chk_detection->check == true) {
+				std::string tsp_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsp";
+				if (ispring::File::FileExist(tsp_path) == true) {
+					e.second = true;
+				} else {
+					e.second = false;
+				}
+			} else if (m_chk_segmentation->check == true) {
+				std::string tsps_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsps";
+				if (ispring::File::FileExist(tsps_path) == true) {
+					e.second = true;
+				} else {
+					e.second = false;
+				}
+			}
+		}
+	}
 public:
 	int OnCreate()override;
 	void OnDestroy()override;

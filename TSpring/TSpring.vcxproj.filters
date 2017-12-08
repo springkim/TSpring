@@ -13,7 +13,7 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="ExportView">
+    <Filter Include="YOLOv2">
       <UniqueIdentifier>{3412655e-6ce0-4ed2-8f7c-b9d1f9841ea3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -49,7 +49,22 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="ExportYOLOv2.h">
-      <Filter>ExportView</Filter>
+      <Filter>YOLOv2</Filter>
+    </ClInclude>
+    <ClInclude Include="cfg_darknet_reference.h">
+      <Filter>YOLOv2</Filter>
+    </ClInclude>
+    <ClInclude Include="cfg_darknet19.h">
+      <Filter>YOLOv2</Filter>
+    </ClInclude>
+    <ClInclude Include="cfg_resnet50.h">
+      <Filter>YOLOv2</Filter>
+    </ClInclude>
+    <ClInclude Include="cfg_densenet201.h">
+      <Filter>YOLOv2</Filter>
+    </ClInclude>
+    <ClInclude Include="gen_anchors.h">
+      <Filter>YOLOv2</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -72,7 +87,7 @@
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="ExportYOLOv2.cpp">
-      <Filter>ExportView</Filter>
+      <Filter>YOLOv2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1197,6 +1212,15 @@
       <Filter>리소스 파일</Filter>
     </Image>
     <Image Include="res\cursor\resize000.png">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\TSpring.png">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\TSpring.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\TSpring_Usage.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
   </ItemGroup>

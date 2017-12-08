@@ -12,15 +12,7 @@
 #include<wykobi/wykobi.hpp>
 #include<wykobi/wykobi_math.hpp>
 #include<wykobi/wykobi_algorithm.hpp>
-class TagInfo {
-public:
-	int m_class;
-	cv::RotatedRect m_rect;
-	TagInfo(int _class, cv::RotatedRect _rect) {
-		m_class = _class;
-		m_rect = _rect;
-	}
-};
+
 class TagView : public VirtualView {
 	const int MOUSE_LEAVE_TIMER_ID = 0x11110004;
 public:
@@ -101,12 +93,12 @@ protected:
 			return iou;
 		};
 		auto ToInnerRect = [](cv::Rect2d a, cv::Mat& img) ->cv::Rect2d{
-			cv::Point p1(a.x, a.y);
-			cv::Point p2(a.x+a.width, a.y+a.height);
-			mspring::SetRange(p1.x,0, img.cols-1);
-			mspring::SetRange(p1.y, 0, img.rows-1);
-			mspring::SetRange(p2.x, 0, img.cols-1);
-			mspring::SetRange(p2.y, 0, img.rows-1);
+			cv::Point2d p1(a.x, a.y);
+			cv::Point2d p2(a.x+a.width, a.y+a.height);
+			mspring::SetRange(p1.x,0.0, img.cols-1.0);
+			mspring::SetRange(p1.y, 0.0, img.rows-1.0);
+			mspring::SetRange(p2.x, 0.0, img.cols-1.0);
+			mspring::SetRange(p2.y, 0.0, img.rows-1.0);
 			return cv::Rect2d(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
 		};
 		for(size_t i=0;i<prev_tag.size();i++){
@@ -155,6 +147,7 @@ protected:
 
 	}
 	int GetFocusedTag() {
+		if (g_exporting == true)return -1;
 		if (m_tag_data.size() == 0) {
 			return -1;
 		}

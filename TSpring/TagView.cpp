@@ -1,94 +1,69 @@
 ﻿#include "stdafx.h"
 #include "TagView.h"
-void DrawColorBoxSE(cv::Mat img, cv::Rect rect, cv::Scalar c) {
-	auto MakeColorBox = [](int w, int h, cv::Scalar c)->cv::Mat {
-		std::vector<cv::Mat> planes;
-		planes.push_back(cv::Mat::zeros(h, w, CV_8UC1) + c[2]);
-		planes.push_back(cv::Mat::zeros(h, w, CV_8UC1) + c[1]);
-		planes.push_back(cv::Mat::zeros(h, w, CV_8UC1) + c[0]);
-		cv::Mat box;
-		cv::merge(planes, box);
-		return box;
-	};
+void DrawColorBoxSE(cv::Mat& img, cv::Rect rect, cv::Scalar c) {
 	cv::Mat crop = img(rect);
-	cv::Mat box = MakeColorBox(rect.width, rect.height, c);
+	cv::Mat box = cv::Mat::zeros(rect.height, rect.width, CV_8UC3) + c;
 	crop = 0.3*crop + 0.7*box;
 }
-CRect DrawCvMat(CDC* pDC, std::vector<TagInfo>& tag_data,cv::Mat& origin, CRect rect, int alphablend = 0, cv::RotatedRect rrect = cv::RotatedRect()) {
+CRect DrawCvMat(CDC* pDC, std::vector<TagInfo>& tag_data, cv::Mat& origin, CRect rect, int alphablend = 0, cv::RotatedRect rrect = cv::RotatedRect()) {
+	auto MakeColorBox = [](int w, int h, COLORREF c)->cv::Mat {
+		cv::Mat box = cv::Mat::zeros(h, w, CV_8UC3) + cv::Scalar(GetBValue(c), GetGValue(c), GetRValue(c));
+		return box;
+	};
 	CImage mfcImg;
 	cv::Mat outImg = origin.clone();
 	cv::Rect img_rect(0, 0, origin.cols, origin.rows);
+
 	for (auto&td : tag_data) {
 		if (td.m_class == -100) {	//ignore
-			DrawColorBoxSE(outImg, td.m_rect.boundingRect(), cv::Scalar(33, 33, 33));
+			outImg(td.m_rect.boundingRect()) = 0.3*outImg(td.m_rect.boundingRect()) + 0.7* cv::Scalar(33, 33, 33);
 		}
 	}
-	if (alphablend == 2 || alphablend==4) {
-		cv::Rect cvrect = rrect.boundingRect();
-		cv::Point2f pt[4];
-		rrect.points(pt);
-		cv::Vec3b color;
-		if (alphablend == 2) {
-			color[0] = 47;
-			color[1] = 50;
-			color[2] = 220;
-		} else if (alphablend == 4) {
-			color[0] = 0;
-			color[1] = 137;
-			color[2] = 181;
+
+	if (alphablend != 0) {
+		int r, g, b;
+		float d = 0.3F;
+		switch (alphablend) {
+			case 1: {
+				d = 1.0F;
+				r = GetRValue(g_lv_color_bk);
+				g = GetGValue(g_lv_color_bk);
+				b = GetBValue(g_lv_color_bk);
+				outImg = 0.3*outImg + 0.7*cv::Scalar(b, g, r);
+			}break;
+			case 2: {
+				r = 220; g = 50; b = 47;
+			}break;
+			case 3: {
+				r = 38; g = 139; b = 210;
+			}break;
+			case 4: {
+				r = 181; g = 137; b = 0;
+			}break;
 		}
-		for (int y = cvrect.y; y < cvrect.y + cvrect.height; y++) {
-			for (int x = cvrect.x; x < cvrect.x + cvrect.width; x++) {
-				if (ispring::CVGeometry::PtInRectangle(cv::Point(x, y), pt[0], pt[1], pt[2], pt[3]) == true) {
-					if (img_rect.contains(cv::Point(x, y)) == true) {
-						outImg.at<cv::Vec3b>(y, x) = origin.at<cv::Vec3b>(y, x)*0.3 + color*0.7;
+		cv::Vec3b color(b, g, r);
+		cv::Rect cvrect = rrect.boundingRect();
+		if (rrect.angle != 0) {
+			cv::Point2f pt[4];
+			rrect.points(pt);
+			for (int y = cvrect.y; y < cvrect.y + cvrect.height; y++) {
+				for (int x = cvrect.x; x < cvrect.x + cvrect.width; x++) {
+					if (ispring::CVGeometry::PtInRectangle(cv::Point(x, y), pt[0], pt[1], pt[2], pt[3]) == true) {
+						if (img_rect.contains(cv::Point(x, y)) == true) {
+							outImg.at<cv::Vec3b>(y, x) = origin.at<cv::Vec3b>(y, x)*d + color*(1.0F - d);
+						}
 					}
 				}
 			}
+		} else {
+			cvrect.width--;
+			cvrect.height--;
+			outImg(cvrect) = origin(cvrect)*d + cv::Scalar(b,g,r)*(1.0F-d);
 		}
-		cv::flip(outImg, outImg, 0);
-	} else if (alphablend == 1) {
-		cv::cvtColor(outImg, outImg, CV_BGR2GRAY);
-		cv::cvtColor(outImg, outImg, CV_GRAY2BGR);
-		auto MakeColorBox = [](int w, int h, COLORREF c)->cv::Mat {
-			std::vector<cv::Mat> planes;
-			planes.push_back(cv::Mat::zeros(h, w, CV_8UC1) + GetBValue(c));
-			planes.push_back(cv::Mat::zeros(h, w, CV_8UC1) + GetGValue(c));
-			planes.push_back(cv::Mat::zeros(h, w, CV_8UC1) + GetRValue(c));
-			cv::Mat box;
-			cv::merge(planes, box);
-			return box;
-		};
-		cv::Mat box = MakeColorBox(outImg.cols, outImg.rows, g_lv_color_bk);
-		outImg = 0.3*outImg + 0.7*box;
-
-		cv::Rect cvrect = rrect.boundingRect();
-		cv::Point2f pt[4];
-		rrect.points(pt);
-		for (int y = cvrect.y; y < cvrect.y + cvrect.height; y++) {
-			for (int x = cvrect.x; x < cvrect.x + cvrect.width; x++) {
-				if (ispring::CVGeometry::PtInRectangle(cv::Point(x, y), pt[0], pt[1], pt[2], pt[3]) == true) {
-					outImg.at<cv::Vec3b>(y, x) = origin.at<cv::Vec3b>(y, x);
-				}
-			}
-		}
-		cv::flip(outImg, outImg, 0);
-	} else if (alphablend == 3) {
-		cv::Rect cvrect = rrect.boundingRect();
-		cv::Point2f pt[4];
-		rrect.points(pt);
-		cv::Vec3b c(210, 139, 38);
-		for (int y = cvrect.y; y < cvrect.y + cvrect.height; y++) {
-			for (int x = cvrect.x; x < cvrect.x + cvrect.width; x++) {
-				if (ispring::CVGeometry::PtInRectangle(cv::Point(x, y), pt[0], pt[1], pt[2], pt[3]) == true) {
-					outImg.at<cv::Vec3b>(y, x) = origin.at<cv::Vec3b>(y, x)*0.3 + c*0.7;
-				}
-			}
-		}
-		cv::flip(outImg, outImg, 0);
-	} else {
-		cv::flip(outImg, outImg, 0);
 	}
+
+	cv::flip(outImg, outImg, 0);
+
 	//흑백이면 채널을3으로
 	if (outImg.channels() == 1) {
 		cv::cvtColor(outImg, outImg, CV_GRAY2BGR);
@@ -159,13 +134,13 @@ TagView::TagView(CWnd* wnd) : VirtualView(wnd) {
 
 	m_chk_edit = new MButtonCheck(wnd, MRect(MRectPosition::RB, 390 - 25, 10, 25, 25));
 	m_chk_edit->m_color_text = &g_lv_color_text_white;
-	m_stc_edit = new MStatic(wnd, MRect(MRectPosition::RB, 190-25-10, 10, 200, 25));
+	m_stc_edit = new MStatic(wnd, MRect(MRectPosition::RB, 190 - 25 - 10, 10, 200, 25));
 	m_stc_edit->m_color_text = &g_lv_color_text;
 	m_stc_edit->m_text = TEXT("Edit mode(&E)");
 
-	m_chk_tracking = new MButtonCheck(wnd, MRect(MRectPosition::RB, 390 - 25-200, 10, 25, 25));
+	m_chk_tracking = new MButtonCheck(wnd, MRect(MRectPosition::RB, 390 - 25 - 200, 10, 25, 25));
 	m_chk_tracking->m_color_text = &g_lv_color_text_white;
-	m_stc_tracking = new MStatic(wnd, MRect(MRectPosition::RB, 10, 10, 200-25-25-5, 25));
+	m_stc_tracking = new MStatic(wnd, MRect(MRectPosition::RB, 10, 10, 200 - 25 - 25 - 5, 25));
 	m_stc_tracking->m_color_text = &g_lv_color_text;
 	m_stc_tracking->m_text = TEXT("Tracking mode(&T)");
 
@@ -190,7 +165,7 @@ void TagView::OnPaint(CDC* pDC) {
 	VirtualView::OnPaint(pDC);
 	m_chk_tracking->check = *g_is_tracking;
 	if (g_image_data->size() > 0 && g_tag_idx >= 0) {
-		m_stc_path->m_text.Format(TEXT("[%d] %s"), g_tag_idx, g_image_data->at(g_tag_idx).first);
+		m_stc_path->m_text.Format(TEXT("[%d]/[%d] %s"), g_tag_idx + 1, static_cast<int>(g_image_data->size()), g_image_data->at(g_tag_idx).first);
 	}
 	m_stc_path->OnPaint(pDC);
 	m_stc_tag_info->m_text.Format(TEXT("%d box%s tagged"), m_tag_data.size(), TEXT("\0es") + (m_tag_data.size() > 1));
@@ -226,6 +201,9 @@ void TagView::OnPaint(CDC* pDC) {
 		m_img = cv::imread(cpp_path);
 		m_img_rect.left = -1;
 		ReadTagFile();
+	}
+	if (g_image_data->size() == 0) {
+		m_img.release();
 	}
 	pDC->Rectangle(rect_image);
 
@@ -268,6 +246,23 @@ void TagView::OnPaint(CDC* pDC) {
 				for (int j = 0; j < 4; j++) {
 					pDC->LineTo(static_cast<int>(pt[j].x), static_cast<int>(pt[j].y));
 				}
+				CPoint ground1, ground2;
+				ground1.x = static_cast<LONG>((pt[0].x + pt[1].x) / 2);
+				ground1.y = static_cast<LONG>((pt[0].y + pt[1].y) / 2);
+				ground2.x = static_cast<LONG>((pt[2].x + pt[3].x) / 2);
+				ground2.y = static_cast<LONG>((pt[2].y + pt[3].y) / 2);
+				if (*g_is_r2pt == true || *g_is_rmid == true) {
+					CPen pen_dot;
+
+					pen_dot.CreatePen(PS_DASH, 1, RGB(c[0], c[1], c[2]));
+					pDC->SelectObject(&pen_dot);
+
+					pDC->SetBkMode(TRANSPARENT);
+					pDC->MoveTo(ground1);
+					pDC->LineTo(ground2);
+					pDC->SelectObject(&pen);
+					pen_dot.DeleteObject();
+				}
 				if (e.m_class >= static_cast<int>(g_class_data->size())) {
 					CPoint cpt[4];
 					for (int j = 0; j < 4; j++) {
@@ -275,7 +270,7 @@ void TagView::OnPaint(CDC* pDC) {
 						cpt[j].y = static_cast<LONG>(pt[j].y);
 					}
 					CBitmap bmp;
-					CBrush brush; 
+					CBrush brush;
 					if (will_remove == i) {
 						bmp.LoadBitmap(IDB_UNKNOWN_RED);
 					} else if (focused == i) {
@@ -295,7 +290,7 @@ void TagView::OnPaint(CDC* pDC) {
 				pen.DeleteObject();
 			}
 		} else {
-			
+
 			int focused = this->GetFocusedTag();
 			if (focused != -1) {
 				m_img_rect = DrawCvMat(pDC, m_tag_data, m_img, rect_image, 4, m_tag_data[focused].m_rect);
@@ -324,6 +319,7 @@ void TagView::OnPaint(CDC* pDC) {
 		}
 	} else {
 		m_img_rect = CRect(0, 0, 0, 0);
+		DrawBitmap(pDC, rect_image, IDB_USAGE);
 	}
 	DrawAlphaBlend(pDC);
 
@@ -350,7 +346,9 @@ void TagView::OnPaint(CDC* pDC) {
 		m_stc_box_size->OnPaint(pDC);
 		m_stc_box_angle->OnPaint(pDC);
 	}
-	
+	if (g_exporting == true) {
+		ShowProgressBar(pDC, this->GetViewRect());
+	}
 }
 void TagView::OnSetFocus(CWnd* pOldWnd) {
 	VirtualView::OnSetFocus(pOldWnd);
@@ -360,6 +358,7 @@ void TagView::OnKillFocus(CWnd* pNewWnd) {
 }
 
 void TagView::OnLButtonDown(UINT nFlags, CPoint point) {
+	if (g_exporting == true)return;
 	VirtualView::OnLButtonDown(nFlags, point);
 	::SetFocus(this->m_parent->GetSafeHwnd());
 	m_list_class->OnLButtonDown();
@@ -396,7 +395,7 @@ void TagView::OnLButtonDown(UINT nFlags, CPoint point) {
 			} else {
 				m_tag_data.push_back(TagInfo(m_list_class->m_select, rrect));
 			}
-			
+
 			this->m_parent->SetTimer(MOUSE_LEAVE_TIMER_ID, 10, nullptr);
 		}
 	} else {		//Edit start
@@ -411,6 +410,7 @@ void TagView::OnLButtonDown(UINT nFlags, CPoint point) {
 	}
 }
 void TagView::OnLButtonUp(UINT nFlags, CPoint point) {
+	if (g_exporting == true)return;
 	VirtualView::OnLButtonUp(nFlags, point);
 	m_list_class->OnLButtonUp();
 	this->m_parent->KillTimer(MOUSE_LEAVE_TIMER_ID);
@@ -425,13 +425,15 @@ void TagView::OnLButtonUp(UINT nFlags, CPoint point) {
 	} else {		//edit end
 		this->ClearEditState();
 	}
-	
+
 	WriteTagFile();
 }
 void TagView::OnLButtonDblClk(UINT nFlags, CPoint point) {
+	if (g_exporting == true)return;
 	VirtualView::OnLButtonDblClk(nFlags, point);
 }
 void TagView::OnRButtonDown(UINT nFlags, CPoint point) {
+	if (g_exporting == true)return;
 	VirtualView::OnRButtonDown(nFlags, point);
 
 	if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000)) {
@@ -439,10 +441,11 @@ void TagView::OnRButtonDown(UINT nFlags, CPoint point) {
 		return;
 	}
 	m_r_down = this->GetMousePoint();
-	
+
 	this->m_parent->Invalidate();
 }
 void TagView::OnRButtonUp(UINT nFlags, CPoint point) {
+	if (g_exporting == true)return;
 	if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000)) {
 		return;
 	}
@@ -468,6 +471,7 @@ void TagView::OnRButtonUp(UINT nFlags, CPoint point) {
 	WriteTagFile();
 }
 BOOL TagView::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt) {
+	if (g_exporting == true)return FALSE;
 	VirtualView::OnMouseWheel(nFlags, zDelta, pt);
 	m_list_class->OnMouseWheel(zDelta);
 	CPoint point = this->GetMousePoint();
@@ -495,6 +499,7 @@ BOOL TagView::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt) {
 	return TRUE;
 }
 void TagView::OnMouseMove(UINT nFlags, CPoint point) {
+	if (g_exporting == true)return;
 	VirtualView::OnMouseMove(nFlags, point);
 	m_chk_edit->OnMouseMove();
 	m_chk_tracking->OnMouseMove();
@@ -504,12 +509,12 @@ void TagView::OnMouseMove(UINT nFlags, CPoint point) {
 			UpdateTagInfo();
 		}
 	} else {
-		if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000) && m_edit_idx !=-1 && m_is_resize==false) {
+		if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000) && m_edit_idx != -1 && m_is_resize == false) {
 			//이동
-			point=this->GetMousePoint();
+			point = this->GetMousePoint();
 			cv::RotatedRect rrect = m_tag_data[m_edit_idx].m_rect;
-			rrect.center.x = m_move_base.x + (point.x - m_l_down.x)*m_img.cols/m_img_rect.Width();
-			rrect.center.y = m_move_base.y +(point.y - m_l_down.y)*m_img.rows/m_img_rect.Height();
+			rrect.center.x = m_move_base.x + (point.x - m_l_down.x)*m_img.cols / m_img_rect.Width();
+			rrect.center.y = m_move_base.y + (point.y - m_l_down.y)*m_img.rows / m_img_rect.Height();
 			if (this->isBoundaryViolation(rrect) == false) {
 				m_tag_data[m_edit_idx].m_rect = rrect;
 			}
@@ -518,7 +523,7 @@ void TagView::OnMouseMove(UINT nFlags, CPoint point) {
 		if (m_is_edit == true) {
 			if (m_edit_idx == -1) return;
 			if (m_is_resize == false)return;
-			if (m_is_side==false) {	//꼭지점 변경
+			if (m_is_side == false) {	//꼭지점 변경
 				m_apex[1] = this->GetMousePoint();
 				cv::RotatedRect rrect = this->GetRotatedRect(m_apex[0], m_apex[1], -static_cast<int>(m_tag_data[m_edit_idx].m_rect.angle));
 				cv::Point2f pt[4];
@@ -543,11 +548,11 @@ void TagView::OnMouseMove(UINT nFlags, CPoint point) {
 				wykobi::point2d<float> wpoint;
 				wpoint.x = static_cast<float>(point.x);
 				wpoint.y = static_cast<float>(point.y);
-				float dist=wykobi::minimum_distance_from_point_to_segment<float>(wpoint, m_side);
+				float dist = wykobi::minimum_distance_from_point_to_segment<float>(wpoint, m_side);
 				wykobi::line<float, 2> line;
 				line[0] = m_side[0];
 				line[1] = m_side[1];
-				wykobi::point2d<float> wpoint_base=wykobi::closest_point_on_line_from_point(line, wpoint);
+				wykobi::point2d<float> wpoint_base = wykobi::closest_point_on_line_from_point(line, wpoint);
 				rpts[idx[2]].x -= (wpoint_base.x - wpoint.x)*m_img.cols / m_img_rect.Width();
 				rpts[idx[2]].y -= (wpoint_base.y - wpoint.y)*m_img.rows / m_img_rect.Height();
 				rpts[idx[3]].x -= (wpoint_base.x - wpoint.x)*m_img.cols / m_img_rect.Width();
@@ -658,6 +663,7 @@ void TagView::OnMouseMove(UINT nFlags, CPoint point) {
 	}
 }
 void TagView::OnMouseLeave() {
+	if (g_exporting == true)return;
 	VirtualView::OnMouseLeave();
 	m_list_class->OnMouseLeave();
 
@@ -671,8 +677,12 @@ void TagView::OnSize(UINT nType, int cx, int cy) {
 	VirtualView::OnSize(nType, cx, cy);
 }
 void TagView::OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags) {
+	auto IsKeyDown = [](char key)->bool {
+		return ((::GetKeyState(key) & 0x8000) == 0x8000);
+	};
+	if (g_exporting == true)return;
 	VirtualView::OnKeyUp(nChar, nRepCnt, nFlags);
-	if (nChar == 'd' || nChar == 'D') {
+	if (IsKeyDown('D')) {
 		if (g_image_data->size() != 0) {
 			if (*g_is_tracking == true) {
 				this->TrackObject();
@@ -681,6 +691,10 @@ void TagView::OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags) {
 	}
 }
 void TagView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) {
+	auto IsKeyDown = [](char key)->bool {
+		return ((::GetKeyState(key) & 0x8000) == 0x8000);
+	};
+	if (g_exporting == true)return;
 	VirtualView::OnKeyDown(nChar, nRepCnt, nFlags);
 	m_list_class->OnKeyDown(nChar);
 	if (m_chk_edit->check == false) {	//Tag mode
@@ -706,25 +720,25 @@ void TagView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) {
 		}
 	}
 	//==
-	if (nChar == 'a' || nChar == 'A') {
+	if (IsKeyDown('A')) {
 		if (g_image_data->size() != 0) {
 			g_tag_idx = static_cast<int>((g_tag_idx - 1 + g_image_data->size()) % g_image_data->size());
 		}
-	} else if (nChar == 'd' || nChar == 'D') {
+	} else if (IsKeyDown('D')) {
 		if (g_image_data->size() != 0) {
 			if (*g_is_tracking == false) {
 				g_tag_idx = (g_tag_idx + 1) % g_image_data->size();
 			}
 		}
-	} else if (nChar == 'w' || nChar == 'W') {
+	} else if (IsKeyDown('W')) {
 		if (m_list_class->m_data.size() > 0) {
 			m_list_class->m_select = static_cast<int>((m_list_class->m_select - 1 + m_list_class->m_data.size()) % m_list_class->m_data.size());
 		}
-	} else if (nChar == 's' || nChar == 'S') {
+	} else if (IsKeyDown('S')) {
 		if (m_list_class->m_data.size() > 0) {
 			m_list_class->m_select = (m_list_class->m_select + 1) % m_list_class->m_data.size();
 		}
-	} else if (nChar == 'e' || nChar == 'E') {
+	} else if (IsKeyDown('E')) {
 		m_chk_edit->check = !m_chk_edit->check;
 		if (m_chk_edit->check == false) {
 			m_is_edit = false;
@@ -732,12 +746,22 @@ void TagView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) {
 			g_degree = -1;
 			AfxGetMainWnd()->SendMessage(WM_SETCURSOR);
 		}
-	} else if (nChar == 't' || nChar == 'T') {
+	} else if (IsKeyDown('T')) {
 		*g_is_tracking = !*g_is_tracking;
+	} else if (IsKeyDown('R')) {
+		int focused = this->GetFocusedTag();
+		if (focused != -1) {
+			int angle = -static_cast<int>(m_tag_data[focused].m_rect.angle);
+			m_tag_data[focused].m_rect.angle = -static_cast<float>((angle + 90) % 360);
+			std::swap(m_tag_data[focused].m_rect.size.width, m_tag_data[focused].m_rect.size.height);
+			this->WriteTagFile();
+		}
 	}
+
 }
 
 void TagView::OnTimer(UINT_PTR nIDEvent) {
+	if (g_exporting == true)return;
 	VirtualView::OnTimer(nIDEvent);
 	m_list_class->OnTimer(nIDEvent);
 
@@ -748,17 +772,18 @@ void TagView::OnTimer(UINT_PTR nIDEvent) {
 			this->OnMouseMove(0, this->GetMousePoint());
 		}
 	}
-	
+
 }
 void TagView::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags) {
-	
+	if (g_exporting == true)return;
 	VirtualView::OnChar(nChar, nRepCnt, nFlags);
 	if (m_drag_point.x != -1 && m_drag_point.y != -1) {
 		return;
 	}
-	
+
 }
 LRESULT TagView::OnComposition(WPARAM wParam, LPARAM lParam) {
+	if (g_exporting == true)return FALSE;
 	VirtualView::OnComposition(wParam, lParam);
 	return 1;
 }

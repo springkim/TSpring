@@ -26,6 +26,9 @@ BEGIN_MESSAGE_MAP(CMainFrame, MSpringFrame)
 	ON_WM_SETCURSOR()
 	ON_WM_DESTROY()
 	ON_COMMAND(ID_FILE_CLEARIMAGES, &CMainFrame::OnFileClearimages)
+	ON_WM_TIMER()
+	ON_COMMAND(ID_EDIT_EDITMODE, &CMainFrame::OnEditEditmode)
+	ON_COMMAND(ID_EDIT_TRACKINGMODE, &CMainFrame::OnEditTrackingmode)
 END_MESSAGE_MAP()
 
 // CMainFrame 생성/소멸
@@ -61,7 +64,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct) {
 	this->SetIcon(IDR_MAINFRAME);
 
 	this->SetStyle(g_font, g_color_bk, g_color_text, g_color_border);
-	this->SetTitle(TEXT("TSpring"));
+	this->SetTitle(TEXT("TSpring 1.0"));
 
 	m_menu_frame = new MSpringMenuFrame(this);
 	m_menu_frame->SetStyle(g_font, g_color_bk, g_color_text_menu, g_color_hover, g_color_bk);
@@ -182,6 +185,9 @@ void CMainFrame::OnFileOpenImages() {
 				g_image_data->push_back(std::make_pair(path, false));
 			}
 		}
+		if (dynamic_cast<ListView*>(this->m_wndView.m_view) != nullptr) {
+			dynamic_cast<ListView*>(this->m_wndView.m_view)->IdentifyTagInfo();
+		}
 		m_wndView.Invalidate();
 		this->Invalidate();
 	}
@@ -215,6 +221,10 @@ void CMainFrame::OnFileOpenimagefolder() {
 				}
 			}
 		}
+		if (dynamic_cast<ListView*>(this->m_wndView.m_view) != nullptr) {
+			dynamic_cast<ListView*>(this->m_wndView.m_view)->IdentifyTagInfo();
+		}
+		m_wndView.Invalidate();
 		this->Invalidate();
 	}
 }
@@ -254,5 +264,32 @@ void CMainFrame::OnDestroy() {
 
 void CMainFrame::OnFileClearimages() {
 	g_image_data->clear();
+	g_tag_idx = 0;
+	this->Invalidate();
+}
+
+
+void CMainFrame::OnTimer(UINT_PTR nIDEvent) {
+	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
+	if (nIDEvent == 7777) {
+		m_wndView.Invalidate();
+		if (g_exporting == false) {
+			this->KillTimer(7777);
+		}
+	}
+	MSpringFrame::OnTimer(nIDEvent);
+}
+
+
+void CMainFrame::OnEditEditmode() {
+	this->m_tag_view->m_chk_edit->check = !this->m_tag_view->m_chk_edit->check;
+	m_wndView.Invalidate();
+	this->Invalidate();
+}
+
+
+void CMainFrame::OnEditTrackingmode() {
+	*g_is_tracking = !*g_is_tracking;
+	m_wndView.Invalidate();
 	this->Invalidate();
 }
