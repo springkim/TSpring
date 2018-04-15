@@ -1,6 +1,7 @@
 #pragma once
 #include<iostream>
 #include<opencv2/opencv.hpp>
+#include"Theme.h"
 inline std::vector<float> IOU(std::pair<float, float> val, std::vector<std::pair<float, float>> centroids) {
 	std::vector<float> similarities;
 	for (size_t i = 0; i < centroids.size(); i++) {
@@ -22,7 +23,7 @@ inline std::vector<float> IOU(std::pair<float, float> val, std::vector<std::pair
 	}
 	return similarities;
 }
-inline std::vector<std::pair<float, float>> KMeans(std::vector<std::pair<float, float>> X, std::vector<std::pair<float, float>> centroids) {
+inline std::vector<std::pair<float, float>> KMeans(std::vector<std::pair<float, float>> X, std::vector<std::pair<float, float>> centroids,std::vector<int>& label) {
 	std::vector<std::pair<float, float>> ret;
 	size_t N = X.size();
 	size_t K = centroids.size();
@@ -39,6 +40,7 @@ inline std::vector<std::pair<float, float>> KMeans(std::vector<std::pair<float, 
 			assignments.push_back(a);
 		}
 		if (assignments == prev_assignments) {
+			label = assignments;
 			ret = centroids;
 			break;
 		}
@@ -59,8 +61,9 @@ inline std::vector<std::pair<float, float>> KMeans(std::vector<std::pair<float, 
 	std::sort(ret.begin(), ret.end());
 	return ret;
 }
-inline std::string GetAnchors(int NUM,int WH,std::vector<std::string> images) {
+inline std::string GetAnchors(int NUM,int WH,std::vector<std::string> images,bool dbg_info,bool is_yolov3) {
 	std::vector<std::pair<float, float>> annotation_dims;
+	cv::Mat img = cv::Mat::zeros(1920, 1920, CV_8UC3) + cv::Scalar(0,0,0);
 	for (auto&file : images) {
 		file = file.substr(0, file.find_last_of('.')) + ".txt";
 		std::fstream fin(file, std::ios::in);
@@ -86,14 +89,37 @@ inline std::string GetAnchors(int NUM,int WH,std::vector<std::string> images) {
 	for (int i = 0; i < NUM; i++) {
 		centroids.push_back(annotation_dims[annotation_dims.size() / (NUM + 2)*(i + 1)]);
 	}
-	centroids = KMeans(annotation_dims, centroids);
+	std::vector<int> labels;
+	centroids = KMeans(annotation_dims, centroids,labels);
 
-	for (auto&e : centroids) {
-		e.first *= WH / 32;
-		e.second *= WH / 32;
+	if (dbg_info) {
+		for (size_t i = 0; i < centroids.size(); i++) {
+			int W = static_cast<int>(centroids[i].first * 1920);
+			int H = static_cast<int>(centroids[i].second * 1920);
+			cv::line(img, cv::Point(0, H), cv::Point(W, H), cv::Scalar(255, 255, 255), 2);
+			cv::line(img, cv::Point(W, 0), cv::Point(W, H), cv::Scalar(255, 255, 255), 2);
+		}
+		for (size_t i = 0; i < annotation_dims.size(); i++) {
+			int W = static_cast<int>(annotation_dims[i].first* 1920);
+			int H = static_cast<int>(annotation_dims[i].second* 1920);
+			cv::circle(img, cv::Point(W, H), 5, ispring::CV::GetRGB(labels[i]),CV_FILLED);
+		}
+		cv::imwrite("Debug\\anchors.png",img);
 	}
+	if (is_yolov3==false) {
+		for (auto&e : centroids) {
+			e.first *= WH / 32;
+			e.second *= WH / 32;
+		}
+	} else {
+		for (auto&e : centroids) {
+			e.first *= WH;
+			e.second *= WH;
+		}
+	}
+	
 	std::ostringstream oss;
-	std::cout.precision(3);
+	oss.precision(3);
 	for (int i = 0; i < centroids.size() - 1; i++) {
 		oss << centroids[i].first << "," << centroids[i].second << ", ";
 	}

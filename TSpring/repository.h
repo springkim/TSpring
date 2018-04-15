@@ -65,6 +65,7 @@ __declspec(selectany) int g_degree = -1;
 __declspec(selectany) std::atomic<COLORREF> g_solarized_yellow = RGB(181,137,0);
 __declspec(selectany) bool* g_is_rotate;
 __declspec(selectany) bool* g_is_ignore;
+__declspec(selectany) bool* g_is_dbg_info;
 __declspec(selectany) std::vector<std::pair<CString, bool>>* g_export_class_data;
 __declspec(selectany) CString g_export_dir;
 __declspec(selectany) CString g_project_name;
@@ -149,4 +150,15 @@ inline void ShowProgressBar(CDC* pDC, CRect rect_window) {
 	pDC->SelectObject(old_font);
 	font.DeleteObject();
 	bk_brush.DeleteObject();
+}
+inline cv::Rect GetSafeRect(cv::Rect rect,cv::Size size) {
+	mspring::SetRange(rect.x, 0, size.width - 1);
+	mspring::SetRange(rect.y, 0,size.height - 1);
+	if (rect.x + rect.width >= size.width) {
+		rect.width = size.width - rect.x - 1;
+	}
+	if (rect.y + rect.height >= size.height) {
+		rect.height = size.height - rect.y - 1;
+	}
+	return rect;
 }

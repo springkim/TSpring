@@ -4,7 +4,6 @@
 // 들어 있는 포함 파일입니다.
 
 #pragma once
-
 #ifndef VC_EXTRALEAN
 #define VC_EXTRALEAN            // 거의 사용되지 않는 내용은 Windows 헤더에서 제외합니다.
 #endif

@@ -49,19 +49,23 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDOWS;_DEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)3rdparty/include/</AdditionalIncludeDirectories>
+      <MinimalRebuild>false</MinimalRebuild>
+      <OpenMPSupport>true</OpenMPSupport>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>$(SolutionDir)3rdparty/staticlib/x64/Debug/</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)3rdparty/staticlib/x64/Debug/;</AdditionalLibraryDirectories>
       <AdditionalDependencies>ippicvmt.lib;IlmImfd.lib;ittnotifyd.lib;libjasperd.lib;libjpegd.lib;libpngd.lib;libprotobufd.lib;libtiffd.lib;libwebpd.lib;opencv_aruco331d.lib;opencv_bgsegm331d.lib;opencv_bioinspired331d.lib;opencv_calib3d331d.lib;opencv_ccalib331d.lib;opencv_core331d.lib;opencv_datasets331d.lib;opencv_dnn331d.lib;opencv_dpm331d.lib;opencv_face331d.lib;opencv_features2d331d.lib;opencv_flann331d.lib;opencv_fuzzy331d.lib;opencv_highgui331d.lib;opencv_imgcodecs331d.lib;opencv_imgproc331d.lib;opencv_img_hash331d.lib;opencv_line_descriptor331d.lib;opencv_ml331d.lib;opencv_objdetect331d.lib;opencv_optflow331d.lib;opencv_phase_unwrapping331d.lib;opencv_photo331d.lib;opencv_plot331d.lib;opencv_reg331d.lib;opencv_rgbd331d.lib;opencv_shape331d.lib;opencv_stereo331d.lib;opencv_stitching331d.lib;opencv_structured_light331d.lib;opencv_superres331d.lib;opencv_surface_matching331d.lib;opencv_text331d.lib;opencv_tracking331d.lib;opencv_video331d.lib;opencv_videoio331d.lib;opencv_videostab331d.lib;opencv_xfeatures2d331d.lib;opencv_ximgproc331d.lib;opencv_xobjdetect331d.lib;opencv_xphoto331d.lib;zlibd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
@@ -83,9 +87,10 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)3rdparty/include/</AdditionalIncludeDirectories>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -110,25 +115,33 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BasicExcel.hpp" />
     <ClInclude Include="cfg_darknet19.h" />
+    <ClInclude Include="cfg_darknet53.h" />
     <ClInclude Include="cfg_darknet_reference.h" />
     <ClInclude Include="cfg_densenet201.h" />
     <ClInclude Include="cfg_resnet50.h" />
+    <ClInclude Include="DataArgumentation.h" />
+    <ClInclude Include="ExcelFormat.h" />
     <ClInclude Include="ExportView.h" />
-    <ClInclude Include="ExportYOLOv2.h" />
     <ClInclude Include="gen_anchors.h" />
+    <ClInclude Include="InputBox.h" />
     <ClInclude Include="ListView.h" />
     <ClInclude Include="MainFrm.h" />
-    <ClInclude Include="repository.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="TagView.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Theme.h" />
     <ClInclude Include="TSpring.h" />
+    <ClInclude Include="TSpringMsgBox.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BasicExcel.cpp" />
+    <ClCompile Include="DataArgumentation.cpp" />
+    <ClCompile Include="ExcelFormat.cpp" />
     <ClCompile Include="ExportView.cpp" />
-    <ClCompile Include="ExportYOLOv2.cpp" />
+    <ClCompile Include="InputBox.cpp" />
     <ClCompile Include="ListView.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -136,7 +149,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="TagView.cpp" />
+    <ClCompile Include="Theme.cpp" />
     <ClCompile Include="TSpring.cpp" />
+    <ClCompile Include="TSpringMsgBox.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="TSpring.rc" />
@@ -508,14 +523,21 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\close.bmp" />
+    <Image Include="res\close_ashsky.bmp" />
     <Image Include="res\cursor\resize000.png" />
     <Image Include="res\focus.png" />
     <Image Include="res\maximize.bmp" />
+    <Image Include="res\maximize_ashsky.bmp" />
     <Image Include="res\minimize.bmp" />
+    <Image Include="res\minimize_ashsky.bmp" />
     <Image Include="res\TSpring.bmp" />
     <Image Include="res\TSpring.ico" />
     <Image Include="res\TSpring.png" />
+    <Image Include="res\TSpring_NoList.bmp" />
+    <Image Include="res\TSpring_NoList_SolarizedDark.bmp" />
     <Image Include="res\TSpring_Usage.bmp" />
+    <Image Include="res\TSpring_Usage_AshSky.bmp" />
+    <Image Include="res\TSpring_Usage_SolarizedDark.bmp" />
     <Image Include="res\unknown.bmp" />
     <Image Include="res\unknown_blue.bmp" />
     <Image Include="res\unknown_red.bmp" />

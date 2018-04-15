@@ -9,6 +9,8 @@
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
 #endif
 
 // CMainFrame
@@ -29,21 +31,19 @@ BEGIN_MESSAGE_MAP(CMainFrame, MSpringFrame)
 	ON_WM_TIMER()
 	ON_COMMAND(ID_EDIT_EDITMODE, &CMainFrame::OnEditEditmode)
 	ON_COMMAND(ID_EDIT_TRACKINGMODE, &CMainFrame::OnEditTrackingmode)
+	ON_COMMAND(ID_THEME_ASHSKY, &CMainFrame::OnThemeAshsky)
+	ON_COMMAND(ID_THEME_SOLARIZEDDARK, &CMainFrame::OnThemeSolarizeddark)
+	ON_MESSAGE(MSPRING_DISABLE_HTTEST, &CMainFrame::OnDisableHtTest)
 END_MESSAGE_MAP()
 
-// CMainFrame 생성/소멸
 
-CMainFrame::CMainFrame() {
-	// TODO: 여기에 멤버 초기화 코드를 추가합니다.
-}
 
-CMainFrame::~CMainFrame() {
-}
+CMainFrame::CMainFrame() {}
+CMainFrame::~CMainFrame() {}
 
 int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct) {
-	if (MSpringFrame::OnCreate(lpCreateStruct) == -1)
-		return -1;
-#ifdef _DEBUG
+	if (MSpringFrame::OnCreate(lpCreateStruct) == -1)return -1;
+#if defined(_DEBUG)
 	if (::AllocConsole() == TRUE) {
 		FILE* nfp[3];
 		freopen_s(nfp + 0, "CONOUT$", "rb", stdin);
@@ -52,70 +52,66 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct) {
 		std::ios::sync_with_stdio(false);
 	}
 #endif
-	// 프레임의 클라이언트 영역을 차지하는 뷰를 만듭니다.
 	if (!m_wndView.Create(NULL, NULL, AFX_WS_DEFAULT_VIEW,
 						  CRect(0, 0, 0, 0), this, AFX_IDW_PANE_FIRST, NULL)) {
 		TRACE0("뷰 창을 만들지 못했습니다.\n");
 		return -1;
 	}
-	this->AddSysBtn(IDB_CLOSE, MSpringFrame::ButtonEvent_Close);
-	this->AddSysBtn(IDB_MAXIMIZE, MSpringFrame::ButtonEvent_MaximizeWindow);
-	this->AddSysBtn(IDB_MINIMIZE, MSpringFrame::ButtonEvent_MinimizeWindow);
+	this->AddSysBtn(GetTheme().ResourceClose(), MSpringFrame::ButtonEvent_Close);
+	this->AddSysBtn(GetTheme().ResourceMaximize(), MSpringFrame::ButtonEvent_MaximizeWindow);
+	this->AddSysBtn(GetTheme().ResourceMinimize(), MSpringFrame::ButtonEvent_MinimizeWindow);
 	this->SetIcon(IDR_MAINFRAME);
-
-	this->SetStyle(g_font, g_color_bk, g_color_text, g_color_border);
-	this->SetTitle(TEXT("TSpring 1.0"));
-
-	m_menu_frame = new MSpringMenuFrame(this);
-	m_menu_frame->SetStyle(g_font, g_color_bk, g_color_text_menu, g_color_hover, g_color_bk);
+	
+	this->SetStyle(GetTheme().Font(), GetTheme().ColorBK(), GetTheme().ColorText(), GetTheme().ColorBorder());
+	this->SetTitle(TEXT("TSpring 2.0"));
+	this->SetTitleColor(GetTheme().ColorTitle());
+	m_menu_frame = CreateFrame<MSpringMenuFrame>(this);
+	m_menu_frame->SetStyle(GetTheme().Font(), GetTheme().ColorBK(), GetTheme().ColorText(), GetTheme().ColorHover(), GetTheme().ColorBK());
 	m_menu_frame->SetMenu(IDR_MAINFRAME);
 	m_menu_frame->SetPosition(0);
 	this->AddExpansionClass(m_menu_frame);
 
-	m_tab_frame = new MSpringTabFrame(this);
-	m_tab_frame->SetStyle(g_font, g_color_activate, g_color_deactivate, g_color_bk, g_color_text_tab);
+	m_tab_frame = CreateFrame<MSpringTabFrame>(this);
+	m_tab_frame->SetStyle(GetTheme().Font(), GetTheme().ColorActivate(), GetTheme().ColorDeactivate(), GetTheme().ColorBK(), GetTheme().ColorText());
+	m_tab_frame->SetActivateBorder(GetTheme().ColorTitle());
 	m_tab_frame->SetPosition(0);
 	m_tab_frame->AddTab(TEXT("List"));
 	m_tab_frame->AddTab(TEXT("Tag"));
 	m_tab_frame->AddTab(TEXT("Export"));
 	this->AddExpansionClass(m_tab_frame);
 
-	m_wndView.SetStyle(g_color_bk);
+	m_wndView.SetStyle(GetTheme().ColorBK());
 
-	m_list_view = new ListView(&m_wndView);
-	g_image_data = &m_list_view->m_list_image->m_data;
-	g_class_data = &m_list_view->m_list_class->m_data;
+	static ListView list_view(&m_wndView);
+	m_list_view = &list_view;
+	GetApp().g_image_data = &m_list_view->m_list_image->m_data;
+	GetApp().g_class_data = &m_list_view->m_list_class->m_data;
 
-	g_is_detection = &m_list_view->m_chk_detection->check;
-	g_is_segmentation = &m_list_view->m_chk_segmentation->check;
-	g_is_square = &m_list_view->m_chk_square->check;
-	g_is_rectangle = &m_list_view->m_chk_rectangle->check;
-	g_is_rmid = &m_list_view->m_chk_r_mid->check;
-	g_is_r2pt = &m_list_view->m_chk_r_2pt->check;
-	g_is_tracking = &m_list_view->m_chk_tracking->check;
+	GetApp().g_is_detection = &m_list_view->m_chk_detection->check;
+	GetApp().g_is_segmentation = &m_list_view->m_chk_segmentation->check;
+	GetApp().g_is_rectangle = &m_list_view->m_chk_rectangle->check;
+	GetApp().g_is_rmid = &m_list_view->m_chk_r_mid->check;
+	GetApp().g_is_r2pt = &m_list_view->m_chk_r_2pt->check;
+	GetApp().g_is_tracking = &m_list_view->m_chk_tracking->check;
 
-
-	m_tag_view = new TagView(&m_wndView);
-	m_export_view = new ExportView(&m_wndView);
+	static TagView tab_view(&m_wndView);
+	m_tag_view = &tab_view;
+	static ExportView export_view(&m_wndView);
+	m_export_view = &export_view;
 	m_wndView.m_view = m_list_view;
 
 	ReadSettingFile();
+	UpdateProgram();
 	return 0;
 }
 
 BOOL CMainFrame::PreCreateWindow(CREATESTRUCT& cs) {
 	if (!MSpringFrame::PreCreateWindow(cs))
 		return FALSE;
-	// TODO: CREATESTRUCT cs를 수정하여 여기에서
-	//  Window 클래스 또는 스타일을 수정합니다.
-
 	cs.dwExStyle &= ~WS_EX_CLIENTEDGE;
 	cs.lpszClass = AfxRegisterWndClass(0);
 	return TRUE;
 }
-
-// CMainFrame 진단
-
 #ifdef _DEBUG
 void CMainFrame::AssertValid() const {
 	MSpringFrame::AssertValid();
@@ -124,22 +120,16 @@ void CMainFrame::AssertValid() const {
 void CMainFrame::Dump(CDumpContext& dc) const {
 	MSpringFrame::Dump(dc);
 }
-#endif //_DEBUG
+#endif
 
 
-// CMainFrame 메시지 처리기
-
-void CMainFrame::OnSetFocus(CWnd* /*pOldWnd*/) {
-	// 뷰 창으로 포커스를 이동합니다.
+void CMainFrame::OnSetFocus(CWnd* pOldWnd) {
 	m_wndView.SetFocus();
 }
 
 BOOL CMainFrame::OnCmdMsg(UINT nID, int nCode, void* pExtra, AFX_CMDHANDLERINFO* pHandlerInfo) {
-	// 뷰에서 첫째 크랙이 해당 명령에 나타나도록 합니다.
 	if (m_wndView.OnCmdMsg(nID, nCode, pExtra, pHandlerInfo))
 		return TRUE;
-
-	// 그렇지 않으면 기본 처리합니다.
 	return MSpringFrame::OnCmdMsg(nID, nCode, pExtra, pHandlerInfo);
 }
 
@@ -159,34 +149,33 @@ void CMainFrame::OnNcLButtonDown(UINT nHitTest, CPoint point) {
 			m_wndView.m_view = m_export_view;
 		}break;
 	}
-	
-
 	m_wndView.Invalidate();
 	this->Invalidate();
 }
 
 
 void CMainFrame::OnFileOpenImages() {
-	//m_image_data
+	if (GetApp().g_exporting == true)return;
 	const TCHAR* IMAGE_FILTER = TEXT("Image File(*bmp;*.jpg;*.jpeg;*.png)|*.bmp;*.jpg;*.jpeg;*.png|BMP File(*.bmp)|*.bmp|JPG File(*.jpg)|*.jpg|JPEG File(*.jpeg)|*.jpeg|PNG File(*.png)|*.png|");
 	CFileDialog dlg(TRUE, NULL, NULL, OFN_ALLOWMULTISELECT, IMAGE_FILTER);
-	CString strFileList;
-	const unsigned int c_cbBuffSize = (10000 * (MAX_PATH + 1)) + 1;
-	dlg.GetOFN().lpstrFile = strFileList.GetBuffer(c_cbBuffSize);
-	dlg.GetOFN().nMaxFile = c_cbBuffSize;
+	dlg.GetOFN().lpstrFile = GetApp().GetBuffer();
+	dlg.GetOFN().nMaxFile = GetApp().g_buffer_size;
 	if (IDOK == dlg.DoModal()) {
-		std::set<CString> overlab_set;
-		for (auto&e : *g_image_data) {
+		std::set<TString> overlab_set;
+		for (auto&e : *GetApp().g_image_data) {
 			overlab_set.insert(e.first);
 		}
 		for (POSITION pos = dlg.GetStartPosition(); pos != NULL;) {
 			CString path = dlg.GetNextPathName(pos);
-			if (overlab_set.find(path) == overlab_set.end()) {
-				g_image_data->push_back(std::make_pair(path, false));
+			TString tpath = TString(path);
+			if (overlab_set.find(tpath) == overlab_set.end()) {
+				GetApp().g_image_data->push_back(std::make_pair(tpath, false));
 			}
+			path.ReleaseBuffer();
 		}
 		if (dynamic_cast<ListView*>(this->m_wndView.m_view) != nullptr) {
 			dynamic_cast<ListView*>(this->m_wndView.m_view)->IdentifyTagInfo();
+			dynamic_cast<ListView*>(this->m_wndView.m_view)->GetFinalID();
 		}
 		m_wndView.Invalidate();
 		this->Invalidate();
@@ -195,9 +184,8 @@ void CMainFrame::OnFileOpenImages() {
 
 
 void CMainFrame::OnGetMinMaxInfo(MINMAXINFO* lpMMI) {
-	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
-	lpMMI->ptMinTrackSize.x = 1200;
-	lpMMI->ptMinTrackSize.y = 740;
+	lpMMI->ptMinTrackSize.x = 1280;
+	lpMMI->ptMinTrackSize.y = 720;
 	lpMMI->ptMaxTrackSize.x = 3840;
 	lpMMI->ptMaxTrackSize.y = 2160;
 	MSpringFrame::OnGetMinMaxInfo(lpMMI);
@@ -205,24 +193,39 @@ void CMainFrame::OnGetMinMaxInfo(MINMAXINFO* lpMMI) {
 
 
 void CMainFrame::OnFileOpenimagefolder() {
+	if (GetApp().g_exporting == true)return;
 	CFolderPickerDialog fpd(nullptr, OFN_ALLOWMULTISELECT | OFN_FILEMUSTEXIST);
+	fpd.GetOFN().lpstrFile = GetApp().GetBuffer();
+	fpd.GetOFN().nMaxFile = GetApp().g_buffer_size;
 	if (IDOK == fpd.DoModal()) {
-		std::set<CString> overlab_set;
-		for (auto&e : *g_image_data) {
+		std::set<TString> overlab_set;
+		for (auto&e : *GetApp().g_image_data) {
 			overlab_set.insert(e.first);
 		}
+		std::vector<TString> dirs;
 		for (POSITION pos = fpd.GetStartPosition(); pos != NULL;) {
 			CString path = fpd.GetNextPathName(pos);
-			std::string cpath = mspring::String::ToString(path);
+			dirs.push_back(TString(path));
+		}
+		std::vector<std::vector<std::pair<TString, bool>>> tmps(dirs.size());
+#pragma omp parallel for schedule(dynamic)
+		for (int i = 0; i < dirs.size(); i++) {
+			std::string cpath = mspring::String::ToString(dirs[i]);
 			std::vector<std::string> cfiles = ispring::File::FileList(cpath, "*.bmp;*.jpg;*.jpeg;*.png", false);
 			for (auto& cfile : cfiles) {
-				if (overlab_set.find(mspring::String::ToCString(cfile)) == overlab_set.end()) {
-					g_image_data->push_back(std::make_pair(mspring::String::ToCString(cfile),false));
+				TString tstr = mspring::String::ToWString(cfile);
+				if (overlab_set.find(tstr) == overlab_set.end()) {
+					tmps[i].push_back(std::make_pair(tstr, false));
 				}
 			}
 		}
+		for (int i = 0; i < dirs.size(); i++) {
+			GetApp().g_image_data->reserve(GetApp().g_image_data->size() + tmps[i].size());
+			GetApp().g_image_data->insert(GetApp().g_image_data->end(), tmps[i].begin(), tmps[i].end());
+		}
 		if (dynamic_cast<ListView*>(this->m_wndView.m_view) != nullptr) {
 			dynamic_cast<ListView*>(this->m_wndView.m_view)->IdentifyTagInfo();
+			dynamic_cast<ListView*>(this->m_wndView.m_view)->GetFinalID();
 		}
 		m_wndView.Invalidate();
 		this->Invalidate();
@@ -231,12 +234,12 @@ void CMainFrame::OnFileOpenimagefolder() {
 
 
 void CMainFrame::OnLButtonDown(UINT nFlags, CPoint point) {
-	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
-	if (g_command_go2tagging != -1) {
+	if (GetApp().g_command_go2tagging != -1) {
 		m_tab_frame->SetCurrentTab(1);
 		m_wndView.m_view = m_tag_view;
-		g_tag_idx = g_command_go2tagging;
-		g_command_go2tagging = -1;
+		int value= GetApp().g_command_go2tagging;
+		GetApp().g_tag_idx = value;
+		GetApp().g_command_go2tagging = -1;
 		m_wndView.Invalidate();
 		this->Invalidate();
 		this->OnNcPaint();
@@ -246,9 +249,8 @@ void CMainFrame::OnLButtonDown(UINT nFlags, CPoint point) {
 
 
 BOOL CMainFrame::OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message) {
-	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
-	if (g_degree != -1) {
-		m_cursor = AfxGetApp()->LoadCursor(IDC_CURSOR1 + (g_degree + 90) % 180);
+	if (GetApp().g_degree != -1) {
+		m_cursor = AfxGetApp()->LoadCursor(IDC_CURSOR1 + (GetApp().g_degree + 90) % 180);
 		m_cursor_prev = SetCursor(m_cursor);
 		return TRUE;
 	}
@@ -258,22 +260,27 @@ BOOL CMainFrame::OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message) {
 
 void CMainFrame::OnDestroy() {
 	WriteSettingFile();
+#ifdef _DEBUG
+	::FreeConsole();
+#endif
 	MSpringFrame::OnDestroy();
 }
 
 
 void CMainFrame::OnFileClearimages() {
-	g_image_data->clear();
-	g_tag_idx = 0;
+	if (GetApp().g_exporting == true)return;
+	GetApp().g_image_data->clear();
+	GetApp().g_tag_idx = 0;
+	GetApp().g_id = -2;
 	this->Invalidate();
 }
 
 
 void CMainFrame::OnTimer(UINT_PTR nIDEvent) {
-	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
+	/// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
 	if (nIDEvent == 7777) {
 		m_wndView.Invalidate();
-		if (g_exporting == false) {
+		if (GetApp().g_exporting == false) {
 			this->KillTimer(7777);
 		}
 	}
@@ -282,6 +289,7 @@ void CMainFrame::OnTimer(UINT_PTR nIDEvent) {
 
 
 void CMainFrame::OnEditEditmode() {
+	if (GetApp().g_exporting == true)return;
 	this->m_tag_view->m_chk_edit->check = !this->m_tag_view->m_chk_edit->check;
 	m_wndView.Invalidate();
 	this->Invalidate();
@@ -289,7 +297,113 @@ void CMainFrame::OnEditEditmode() {
 
 
 void CMainFrame::OnEditTrackingmode() {
-	*g_is_tracking = !*g_is_tracking;
+	if (GetApp().g_exporting == true)return;
+	*GetApp().g_is_tracking = !*GetApp().g_is_tracking;
 	m_wndView.Invalidate();
 	this->Invalidate();
+}
+
+void CMainFrame::OnThemeUpdate() {
+	this->ClearSysBtn();
+	this->AddSysBtn(GetTheme().ResourceClose() , MSpringFrame::ButtonEvent_Close);
+	this->AddSysBtn(GetTheme().ResourceMaximize() , MSpringFrame::ButtonEvent_MaximizeWindow);
+	this->AddSysBtn(GetTheme().ResourceMinimize(), MSpringFrame::ButtonEvent_MinimizeWindow);
+	this->SetIcon(IDR_MAINFRAME);
+	this->SetStyle(GetTheme().Font(), GetTheme().ColorBK(), GetTheme().ColorText(), GetTheme().ColorBorder());
+	this->SetTitleColor(GetTheme().ColorTitle());
+	m_menu_frame->SetStyle(GetTheme().Font(), GetTheme().ColorBK(), GetTheme().ColorText(), GetTheme().ColorHover(), GetTheme().ColorBK());
+
+
+	m_tab_frame->SetStyle(GetTheme().Font(), GetTheme().ColorActivate(), GetTheme().ColorDeactivate(), GetTheme().ColorBK(), GetTheme().ColorText());
+	m_tab_frame->SetActivateBorder(GetTheme().ColorMenuBorder());
+	
+	m_wndView.SetStyle(GetTheme().ColorBK());
+	GetTheme().Update();
+	this->OnNcPaint();
+	this->Invalidate();
+}
+
+void CMainFrame::OnThemeAshsky() {
+	GetTheme().SetIdx(0);
+	OnThemeUpdate();
+}
+
+
+void CMainFrame::OnThemeSolarizeddark() {
+	GetTheme().SetIdx(1);
+	OnThemeUpdate();
+}
+
+LRESULT CMainFrame::OnDisableHtTest(WPARAM wParam, LPARAM lParam) {
+	int b = (int)wParam;
+	this->SetHtTest(b != 0);
+	return 1;
+}
+UINT _UpdateProgram(LPVOID param) {
+	std::string version = "2.0";
+	char c_temp[MAX_PATH + 1] = { 0 };
+	SHGetSpecialFolderPathA(AfxGetMainWnd()->GetSafeHwnd(), c_temp, CSIDL_COMMON_APPDATA, TRUE);
+	std::string temp = c_temp;
+	if (temp.back() != '\\' || temp.back() != '/') {
+		temp += '\\';
+	}
+	std::string verfile =temp+"TSpring_version.txt";
+	std::ostringstream oss;
+	oss << "powershell \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile(\'"
+		<< "https://www.dropbox.com/s/nymwmtwiz0ak093/version.txt?dl=1" << "\',\'" << verfile << "\')\"";
+	WinExec(oss.str().c_str(), SW_HIDE);
+	std::fstream fin(verfile, std::ios::in);
+	std::string new_version;
+	fin >> new_version;
+	fin.close();
+
+	std::fstream noupdate("noupdate.txt", std::ios::in);
+	if (noupdate.is_open() == true) {
+		noupdate.close();
+	}
+	else if (version != new_version) {
+		std::string newfile = temp + "TSpring.exe";
+		//Do update
+		//최신버전 먼저 다운로드
+		std::ostringstream oss;
+		oss << "powershell \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile(\'"
+			<< "https://www.dropbox.com/s/npv7xwrtapwcpmi/TSpring.exe?dl=1" << "\',\'" << newfile << "\')\"";
+		WinExec(oss.str().c_str(), SW_HIDE);
+
+		std::string updatefile = temp + "TSpring_update.bat";
+		char olddir[MAX_PATH] = { 0 };
+		GetCurrentDirectoryA(MAX_PATH,olddir);
+
+		char oldfile[MAX_PATH];
+		GetModuleFileNameA(NULL, oldfile, MAX_PATH);
+
+		char* oldexe = oldfile + strlen(oldfile);
+		while (*oldexe != '\\')oldexe--;oldexe++;
+		//메시지 박스 띄움(강제 업데이트)
+		std::fstream fout(updatefile, std::ios::out);
+		fout << "@echo off" << std::endl;
+		fout << "set olddir=\"" << olddir << "\\\"" << std::endl;
+		fout << "set oldexe=" << oldexe << std::endl;
+		fout << "set oldfile=\"" << oldfile << "\"" << std::endl;
+		fout << "set newfile=\"" << newfile << "\"" << std::endl;
+		fout << ":loop" << std::endl;
+		fout << "DEL %oldfile%" << std::endl;
+		fout << "timeout /t 1 /nobreak > NUL" << std::endl;
+		fout << "if exist %oldfile% goto loop" << std::endl;
+		fout << "move %newfile% %oldfile%" << std::endl;
+		fout << "timeout /t 1 /nobreak > NUL" << std::endl;
+		fout << "start /D %olddir% %oldexe%" << std::endl;
+		fout << "exit /b" << std::endl;
+		fout.close();
+		std::string msg = "Update available(" + version + "->" + new_version + ")";
+		TSpringMsgBox msgbox(TString(msg.begin(), msg.end()));
+		msgbox.DoModal();
+		WinExec(updatefile.c_str(), SW_HIDE);
+		::AfxGetMainWnd()->PostMessage(WM_COMMAND, ID_APP_EXIT, 0);
+	}
+	return 1;
+}
+void CMainFrame::UpdateProgram() {
+	AfxBeginThread(_UpdateProgram,nullptr);
+	//_UpdateProgram(nullptr);
 }

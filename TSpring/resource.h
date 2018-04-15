@@ -193,20 +193,38 @@
 #define IDC_CURSOR180                   683
 #define IDB_TSPRING                     686
 #define IDB_BITMAP1                     687
-#define IDB_USAGE                       687
+#define IDB_CLOSE_ASHSKY                688
+#define IDB_MAXIMIZE_ASHSKY             689
+#define IDB_MINIMIZE_ASHSKY             690
+#define IDB_USAGE_ASHSKY                691
+#define IDB_NOLIST_ASHSKY               692
+#define IDD_INPUT                       693
+#define IDB_ABOUTBOX                    695
+#define IDD_MSGBOX                      697
+#define IDB_USAGE_SOLARIZED_DARK        699
+#define IDB_NOLIST_SOLARIZED_DARK       700
+#define IDC_STATIC_ID                   1000
+#define IDC_EDIT1                       1002
+#define IDC_VERSION                     1003
+#define IDC_STATIC_URL                  1004
+#define IDC_STATIC_COPYRIGHT            1005
+#define IDC_MSG                         1007
 #define ID_FILE_OPENIMAGES              32771
 #define ID_FILE_OPENIMAGEFOLDER         32772
 #define ID_FILE_CLEARIMAGES             32773
 #define ID_EDIT_EDITMODE                32774
 #define ID_EDIT_TRACKINGMODE            32775
+#define ID_THEME_ASHSKY                 32776
+#define ID_THEME_SOLARIZEDDARK          32777
+#define ID_TEST_TEST                    32778
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        688
-#define _APS_NEXT_COMMAND_VALUE         32776
-#define _APS_NEXT_CONTROL_VALUE         1000
+#define _APS_NEXT_RESOURCE_VALUE        701
+#define _APS_NEXT_COMMAND_VALUE         32779
+#define _APS_NEXT_CONTROL_VALUE         1008
 #define _APS_NEXT_SYMED_VALUE           310
 #endif
 #endif

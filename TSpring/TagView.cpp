@@ -1,4 +1,5 @@
-﻿#include "stdafx.h"
+﻿
+#include "stdafx.h"
 #include "TagView.h"
 void DrawColorBoxSE(cv::Mat& img, cv::Rect rect, cv::Scalar c) {
 	cv::Mat crop = img(rect);
@@ -6,6 +7,7 @@ void DrawColorBoxSE(cv::Mat& img, cv::Rect rect, cv::Scalar c) {
 	crop = 0.3*crop + 0.7*box;
 }
 CRect DrawCvMat(CDC* pDC, std::vector<TagInfo>& tag_data, cv::Mat& origin, CRect rect, int alphablend = 0, cv::RotatedRect rrect = cv::RotatedRect()) {
+
 	auto MakeColorBox = [](int w, int h, COLORREF c)->cv::Mat {
 		cv::Mat box = cv::Mat::zeros(h, w, CV_8UC3) + cv::Scalar(GetBValue(c), GetGValue(c), GetRValue(c));
 		return box;
@@ -16,7 +18,8 @@ CRect DrawCvMat(CDC* pDC, std::vector<TagInfo>& tag_data, cv::Mat& origin, CRect
 
 	for (auto&td : tag_data) {
 		if (td.m_class == -100) {	//ignore
-			outImg(td.m_rect.boundingRect()) = 0.3*outImg(td.m_rect.boundingRect()) + 0.7* cv::Scalar(33, 33, 33);
+			cv::Rect cvrect = GetSafeRect(td.m_rect.boundingRect(), outImg.size());
+			outImg(cvrect) = 0.3*outImg(cvrect) + 0.7* cv::Scalar(33, 33, 33);
 		}
 	}
 
@@ -26,9 +29,10 @@ CRect DrawCvMat(CDC* pDC, std::vector<TagInfo>& tag_data, cv::Mat& origin, CRect
 		switch (alphablend) {
 			case 1: {
 				d = 1.0F;
-				r = GetRValue(g_lv_color_bk);
-				g = GetGValue(g_lv_color_bk);
-				b = GetBValue(g_lv_color_bk);
+				COLORREF lv_color_bk = *GetTheme().ListViewColorBK();
+				r = GetRValue(lv_color_bk);
+				g = GetGValue(lv_color_bk);
+				b = GetBValue(lv_color_bk);
 				outImg = 0.3*outImg + 0.7*cv::Scalar(b, g, r);
 			}break;
 			case 2: {
@@ -43,6 +47,14 @@ CRect DrawCvMat(CDC* pDC, std::vector<TagInfo>& tag_data, cv::Mat& origin, CRect
 		}
 		cv::Vec3b color(b, g, r);
 		cv::Rect cvrect = rrect.boundingRect();
+		mspring::SetRange(cvrect.x, 0, outImg.cols - 1);
+		mspring::SetRange(cvrect.y, 0, outImg.rows - 1);
+		if (cvrect.x + cvrect.width >= outImg.cols) {
+			cvrect.width = outImg.cols - cvrect.x - 1;
+		}
+		if (cvrect.y + cvrect.height >= outImg.rows) {
+			cvrect.height = outImg.rows - cvrect.y - 1;
+		}
 		if (rrect.angle != 0) {
 			cv::Point2f pt[4];
 			rrect.points(pt);
@@ -109,44 +121,98 @@ CRect DrawCvMat(CDC* pDC, std::vector<TagInfo>& tag_data, cv::Mat& origin, CRect
 
 
 TagView::TagView(CWnd* wnd) : VirtualView(wnd) {
-	m_list_class = new MListBox(wnd, MRect(MRectPosition::R, 380, 10, 10, 300));
-	m_list_class->m_color_bk = &g_lv_color_bk;
-	m_list_class->m_color_text = &g_lv_color_text;
+	m_list_class = CreateControl<MListBox>(wnd, MRect(MRectPosition::R, 380, 10, 10, 350));
+	m_list_class->m_color_bk = GetTheme().ListViewColorBK();
+	m_list_class->m_color_text = GetTheme().ListViewColorText();
+	m_list_class->is_numbering = true;
+	m_list_class->m_color_fr = GetTheme().ListColorScroll();
 
-	m_stc_path = new MStatic(wnd, MRect(MRectPosition::B, 10, 30, 380, 5));
-	m_stc_path->m_color_text = &g_lv_color_text;
+	m_stc_path = CreateControl<MStatic>(wnd, MRect(MRectPosition::B, 10, 30, 380, 5));
+	m_stc_path->m_color_text = GetTheme().ListViewColorText();
 	m_stc_path->m_text = TEXT("");
 
-	m_stc_tag_info = new MStatic(wnd, MRect(MRectPosition::RB, 10, 50, 380, 30));
-	m_stc_tag_info->m_color_text = &g_lv_color_text;
+	m_stc_tag_info = CreateControl<MStatic>(wnd, MRect(MRectPosition::RB, 10, 150, 380, 30));
+	m_stc_tag_info->m_color_text = GetTheme().ListViewColorText();
+	m_stc_tag_info->m_text = TEXT("");
 
-	m_stc_box_angle = new MStatic(wnd, MRect(MRectPosition::RB, 10, 100, 380, 30));
-	m_stc_box_angle->m_color_text = &g_tag_color_text_purple;
+	m_stc_box_angle = CreateControl<MStatic>(wnd, MRect(MRectPosition::RB, 10, 200, 380, 30));
+	m_stc_box_angle->m_color_text = GetTheme().ListViewColorText();
+	m_stc_box_angle->m_text = TEXT("");
 
-	m_stc_box_size = new MStatic(wnd, MRect(MRectPosition::RB, 10, 150, 380, 30));
-	m_stc_box_size->m_color_text = &g_tag_color_text_purple;
+	m_stc_box_coord = CreateControl<MStatic>(wnd, MRect(MRectPosition::RB, 10, 250, 380, 30));
+	m_stc_box_coord->m_color_text = GetTheme().ListViewColorText();
+	m_stc_box_coord->m_text = TEXT("");
 
-	m_stc_box_center = new MStatic(wnd, MRect(MRectPosition::RB, 10, 200, 380, 30));
-	m_stc_box_center->m_color_text = &g_tag_color_text_purple;
+	m_stc_box_class = CreateControl<MStatic>(wnd, MRect(MRectPosition::RB, 10, 300, 380, 30));
+	m_stc_box_class->m_color_text = GetTheme().ListViewColorText();
+	m_stc_box_class->m_text = TEXT("");
 
-	m_stc_box_class = new MStatic(wnd, MRect(MRectPosition::RB, 10, 250, 380, 30));
-	m_stc_box_class->m_color_text = &g_tag_color_text_purple;
+	m_btn_pen_style = CreateControl<MButton>(wnd, MRect(MRectPosition::RB, 390 - 190+40, 110, 150, 25));
+	m_btn_pen_style->m_color_text = GetTheme().ButtonColorText();
+	m_btn_pen_style->m_color_fr= GetTheme().ButtonColorFR();
+	m_btn_pen_style->m_text = TEXT("");
 
-	m_chk_edit = new MButtonCheck(wnd, MRect(MRectPosition::RB, 390 - 25, 10, 25, 25));
-	m_chk_edit->m_color_text = &g_lv_color_text_white;
-	m_stc_edit = new MStatic(wnd, MRect(MRectPosition::RB, 190 - 25 - 10, 10, 200, 25));
-	m_stc_edit->m_color_text = &g_lv_color_text;
+	m_chk_magnifier = CreateControl<MButtonCheck>(wnd, MRect(MRectPosition::RB, 390 - 25 - 200, 110, 25, 25));
+	m_chk_magnifier->m_color_text = GetTheme().ButtonColorText();
+	m_chk_magnifier->m_color_fr = GetTheme().ButtonColorFR();
+	m_stc_magnifier = CreateControl<MStatic>(wnd, MRect(MRectPosition::RB, 10, 110, 200 - 25 - 25 - 5, 25));
+	m_stc_magnifier->m_color_text = GetTheme().ListViewColorText();
+	m_stc_magnifier->m_text = TEXT("Magnifier(&M)");
+
+	m_chk_crosshair = CreateControl<MButtonCheck>(wnd, MRect(MRectPosition::RB, 390 - 25, 60, 25, 25));
+	m_chk_crosshair->m_color_text = GetTheme().ButtonColorText();
+	m_chk_crosshair->m_color_fr = GetTheme().ButtonColorFR();
+	m_stc_crosshair = CreateControl<MStatic>(wnd, MRect(MRectPosition::RB, 190 - 25 - 10, 60, 200, 25));
+	m_stc_crosshair->m_color_text = GetTheme().ListViewColorText();
+	m_stc_crosshair->m_text = TEXT("Crosshair(&C)");
+
+	m_chk_showid = CreateControl<MButtonCheck>(wnd, MRect(MRectPosition::RB, 390 - 25 - 200, 60, 25, 25));
+	m_chk_showid->m_color_text = GetTheme().ButtonColorText();
+	m_chk_showid->m_color_fr = GetTheme().ButtonColorFR();
+	m_stc_showid = CreateControl<MStatic>(wnd, MRect(MRectPosition::RB, 10, 60, 200 - 25 - 25 - 5, 25));
+	m_stc_showid->m_color_text = GetTheme().ListViewColorText();
+	m_stc_showid->m_text = TEXT("Show ID(&I)");
+
+	m_chk_edit = CreateControl<MButtonCheck>(wnd, MRect(MRectPosition::RB, 390 - 25, 10, 25, 25));
+	m_chk_edit->m_color_text = GetTheme().ButtonColorText();
+	m_chk_edit->m_color_fr = GetTheme().ButtonColorFR();
+	m_stc_edit = CreateControl<MStatic>(wnd, MRect(MRectPosition::RB, 190 - 25 - 10, 10, 200, 25));
+	m_stc_edit->m_color_text = GetTheme().ListViewColorText();
 	m_stc_edit->m_text = TEXT("Edit mode(&E)");
 
-	m_chk_tracking = new MButtonCheck(wnd, MRect(MRectPosition::RB, 390 - 25 - 200, 10, 25, 25));
-	m_chk_tracking->m_color_text = &g_lv_color_text_white;
-	m_stc_tracking = new MStatic(wnd, MRect(MRectPosition::RB, 10, 10, 200 - 25 - 25 - 5, 25));
-	m_stc_tracking->m_color_text = &g_lv_color_text;
+	m_chk_tracking = CreateControl<MButtonCheck>(wnd, MRect(MRectPosition::RB, 390 - 25 - 200, 10, 25, 25));
+	m_chk_tracking->m_color_text = GetTheme().ButtonColorText();
+	m_chk_tracking->m_color_fr = GetTheme().ButtonColorFR();
+	m_stc_tracking = CreateControl<MStatic>(wnd, MRect(MRectPosition::RB, 10, 10, 200 - 25 - 25 - 5, 25));
+	m_stc_tracking->m_color_text = GetTheme().ListViewColorText();
 	m_stc_tracking->m_text = TEXT("Tracking mode(&T)");
 
 	m_drag_point.x = -1;
 	m_drag_point.y = -1;
 	m_img_rect.left = -1;
+
+	GetApp().g_pen_weight = &m_pen_style;
+	GetApp().g_is_magnifier = &m_chk_magnifier->check;
+	GetApp().g_is_crosshair = &m_chk_crosshair->check;
+	GetApp().g_is_showid = &m_chk_showid->check;
+
+	this->AddControl(m_list_class);
+	this->AddControl(m_stc_path);
+	this->AddControl(m_stc_tag_info);
+	this->AddControl(m_stc_box_class);
+	this->AddControl(m_stc_box_coord);
+	this->AddControl(m_stc_box_angle);
+	this->AddControl(m_chk_magnifier);
+	this->AddControl(m_stc_magnifier);
+	this->AddControl(m_chk_showid);
+	this->AddControl(m_stc_showid);
+	this->AddControl(m_chk_crosshair);
+	this->AddControl(m_stc_crosshair);
+	this->AddControl(m_chk_edit);
+	this->AddControl(m_stc_edit);
+	this->AddControl(m_chk_tracking);
+	this->AddControl(m_stc_tracking);
+	this->AddControl(m_btn_pen_style);
 }
 
 
@@ -162,24 +228,38 @@ void TagView::OnDestroy() {
 }
 
 void TagView::OnPaint(CDC* pDC) {
-	VirtualView::OnPaint(pDC);
-	m_chk_tracking->check = *g_is_tracking;
-	if (g_image_data->size() > 0 && g_tag_idx >= 0) {
-		m_stc_path->m_text.Format(TEXT("[%d]/[%d] %s"), g_tag_idx + 1, static_cast<int>(g_image_data->size()), g_image_data->at(g_tag_idx).first);
+	m_chk_tracking->check = *GetApp().g_is_tracking;
+	if (*GetApp().g_is_r2pt || *GetApp().g_is_rmid) {
+		m_chk_tracking->disable = true;
+	} else {
+		m_chk_tracking->disable = false;
 	}
-	m_stc_path->OnPaint(pDC);
-	m_stc_tag_info->m_text.Format(TEXT("%d box%s tagged"), m_tag_data.size(), TEXT("\0es") + (m_tag_data.size() > 1));
-	m_stc_tag_info->OnPaint(pDC);
-	if (m_list_class->m_select == -1 && g_class_data->size() > 0) {
+	if (GetApp().g_image_data->size() > 0 && GetApp().g_tag_idx >= 0) {
+		OStringStream oss;
+		oss << TEXT("[") << GetApp().g_tag_idx + 1 << TEXT("]/[") << static_cast<int>(GetApp().g_image_data->size()) << TEXT("] ") << GetApp().g_image_data->at(GetApp().g_tag_idx).first;
+		m_stc_path->m_text = oss.str();
+	}
+	{	//풀지마셈
+		OStringStream oss;
+		oss << m_tag_data.size() << TEXT(" box") << TEXT("\0es") + (m_tag_data.size() > 1) << TEXT(" tagged");
+		m_stc_tag_info->m_text = oss.str();
+	}
+	if (m_list_class->m_select == -1 && GetApp().g_class_data->size() > 0) {
 		m_list_class->m_select = 0;
 	}
-	m_chk_edit->OnPaint(pDC);
-	m_stc_edit->OnPaint(pDC);
-	m_chk_tracking->OnPaint(pDC);
-	m_stc_tracking->OnPaint(pDC);
-	m_list_class->m_data.assign(g_class_data->size(), std::pair<CString, bool>());
-	std::copy(g_class_data->begin(), g_class_data->end(), m_list_class->m_data.begin());
-	m_list_class->OnPaint(pDC);
+	switch (m_pen_style) {
+		case 0:m_btn_pen_style->m_text = TEXT("Light pen"); break;
+		case 1:m_btn_pen_style->m_text = TEXT("Heavy pen"); break;
+		case 2:m_btn_pen_style->m_text = TEXT("Thin pen"); break;
+	}
+	///Bottle nect #1
+	if (m_list_class->m_data.size() != GetApp().g_class_data->size()) {
+		m_list_class->m_data.assign(GetApp().g_class_data->begin(), GetApp().g_class_data->end());
+	}
+	m_stc_box_class->m_text.clear();
+	m_stc_box_coord->m_text.clear();
+	m_stc_box_angle->m_text.clear();
+
 	CRect rect = this->GetViewRect();
 	//Draw image
 	CRect rect_image;
@@ -188,21 +268,21 @@ void TagView::OnPaint(CDC* pDC) {
 	rect_image.bottom = rect.bottom - 40;
 	rect_image.right = rect.right - m_list_class->m_rect.GetRect(rect).Width() - 20;
 
-	CBrush brush_bk; brush_bk.CreateSolidBrush(g_lv_color_bk);
+	CBrush brush_bk; brush_bk.CreateSolidBrush(*GetTheme().ListViewColorBK());
 	CPen pen_null; pen_null.CreatePen(PS_NULL, 0, RGB(0, 0, 0));
 	CBrush* old_brush = pDC->SelectObject(&brush_bk);
 	CPen* old_pen = pDC->SelectObject(&pen_null);
 
-	static CString path = TEXT("");
-	if (g_image_data->size() > g_tag_idx && path != g_image_data->at(g_tag_idx).first) {
-		path = g_image_data->at(g_tag_idx).first;
+	static TString path = TEXT("");
+	if (GetApp().g_image_data->size() > GetApp().g_tag_idx && path != GetApp().g_image_data->at(GetApp().g_tag_idx).first) {
+		path = GetApp().g_image_data->at(GetApp().g_tag_idx).first;
 		std::string cpp_path = mspring::String::ToString(path);
 		m_img.release();
 		m_img = cv::imread(cpp_path);
 		m_img_rect.left = -1;
 		ReadTagFile();
 	}
-	if (g_image_data->size() == 0) {
+	if (GetApp().g_image_data->size() == 0) {
 		m_img.release();
 	}
 	pDC->Rectangle(rect_image);
@@ -240,18 +320,46 @@ void TagView::OnPaint(CDC* pDC) {
 					pt[j].y = pt[j].y*m_img_rect.Height() / m_img.rows + m_img_rect.top;
 				}
 				auto c = ispring::CV::GetRGB(e.m_class);
-				CPen pen; pen.CreatePen(PS_SOLID, 2, RGB(c[0], c[1], c[2]));
+				CPen pen;
+				switch (m_pen_style) {
+					case 0:pen.CreatePen(PS_SOLID, 2, RGB(c[0], c[1], c[2])); break;
+					case 1:pen.CreatePen(PS_SOLID, 4, RGB(c[0], c[1], c[2])); break;
+					case 2:pen.CreatePen(PS_SOLID, 1, RGB(c[0], c[1], c[2])); break;
+				}
 				CPen* old_pen = pDC->SelectObject(&pen);
 				pDC->MoveTo(static_cast<int>(pt[3].x), static_cast<int>(pt[3].y));
 				for (int j = 0; j < 4; j++) {
 					pDC->LineTo(static_cast<int>(pt[j].x), static_cast<int>(pt[j].y));
+				}
+				if(m_chk_showid->check==true){
+					CFont font;
+					font.CreateFont(30, 0, static_cast<int>(-e.m_rect.angle*10),0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, VARIABLE_PITCH | FF_SWISS,GetTheme().Font().c_str());
+					CFont* old_font=pDC->SelectObject(&font);
+					pDC->SetTextColor(RGB(255,255,255));
+					pDC->SetBkMode(OPAQUE);
+					pDC->SetBkColor(RGB(c[0], c[1], c[2]));
+
+					OStringStream oss;
+					oss << TEXT(" ") << e.m_id << TEXT(" ");
+					pDC->TextOut(static_cast<int>(pt[0].x), static_cast<int>(pt[0].y), oss.str().c_str(), static_cast<int>(oss.str().length()));
+					CSize sz;
+					GetTextExtentPoint32(pDC->GetSafeHdc(), oss.str().c_str(), static_cast<int>(oss.str().length()), &sz);
+					cv::RotatedRect rrect;
+					rrect.center.x = pt[0].x + sz.cx / 2;
+					rrect.center.y = pt[0].y + sz.cy / 2;
+					rrect.size.width = static_cast<float>( sz.cx);
+					rrect.size.height = static_cast<float>(sz.cy);
+					rrect.angle = e.m_rect.angle;
+					m_tag_data[i].m_id_rect = rrect;
+					pDC->SelectObject(old_font);
+					font.DeleteObject();
 				}
 				CPoint ground1, ground2;
 				ground1.x = static_cast<LONG>((pt[0].x + pt[1].x) / 2);
 				ground1.y = static_cast<LONG>((pt[0].y + pt[1].y) / 2);
 				ground2.x = static_cast<LONG>((pt[2].x + pt[3].x) / 2);
 				ground2.y = static_cast<LONG>((pt[2].y + pt[3].y) / 2);
-				if (*g_is_r2pt == true || *g_is_rmid == true) {
+				if (*GetApp().g_is_r2pt == true || *GetApp().g_is_rmid == true) {
 					CPen pen_dot;
 
 					pen_dot.CreatePen(PS_DASH, 1, RGB(c[0], c[1], c[2]));
@@ -263,7 +371,7 @@ void TagView::OnPaint(CDC* pDC) {
 					pDC->SelectObject(&pen);
 					pen_dot.DeleteObject();
 				}
-				if (e.m_class >= static_cast<int>(g_class_data->size())) {
+				if (e.m_class >= static_cast<int>(GetApp().g_class_data->size())) {
 					CPoint cpt[4];
 					for (int j = 0; j < 4; j++) {
 						cpt[j].x = static_cast<LONG>(pt[j].x);
@@ -306,11 +414,39 @@ void TagView::OnPaint(CDC* pDC) {
 					pt[j].y = pt[j].y*m_img_rect.Height() / m_img.rows + m_img_rect.top;
 				}
 				auto c = ispring::CV::GetRGB(e.m_class);
-				CPen pen; pen.CreatePen(PS_SOLID, 2, RGB(c[0], c[1], c[2]));
+				CPen pen; 
+				switch (m_pen_style) {
+					case 0:pen.CreatePen(PS_SOLID, 2, RGB(c[0], c[1], c[2])); break;
+					case 1:pen.CreatePen(PS_SOLID, 4, RGB(c[0], c[1], c[2])); break;
+					case 2:pen.CreatePen(PS_SOLID, 1, RGB(c[0], c[1], c[2])); break;
+				}
 				CPen* old_pen = pDC->SelectObject(&pen);
 				pDC->MoveTo(static_cast<int>(pt[3].x), static_cast<int>(pt[3].y));
 				for (int j = 0; j < 4; j++) {
 					pDC->LineTo(static_cast<int>(pt[j].x), static_cast<int>(pt[j].y));
+				}
+				if (m_chk_showid->check == true) {
+					CFont font;
+					font.CreateFont(30, 0, static_cast<int>(-e.m_rect.angle * 10), 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, VARIABLE_PITCH | FF_SWISS, GetTheme().Font().c_str());
+					CFont* old_font = pDC->SelectObject(&font);
+					pDC->SetTextColor(RGB(255, 255, 255));
+					pDC->SetBkMode(OPAQUE);
+					pDC->SetBkColor(RGB(c[0], c[1], c[2]));
+
+					OStringStream oss;
+					oss << TEXT(" ") << e.m_id << TEXT(" ");
+					pDC->TextOut(static_cast<int>(pt[0].x), static_cast<int>(pt[0].y), oss.str().c_str(), static_cast<int>(oss.str().length()));
+					CSize sz;
+					GetTextExtentPoint32(pDC->GetSafeHdc(), oss.str().c_str(), static_cast<int>(oss.str().length()), &sz);
+					cv::RotatedRect rrect;
+					rrect.center.x = pt[0].x + sz.cx / 2;
+					rrect.center.y = pt[0].y + sz.cy / 2;
+					rrect.size.width = static_cast<float>(sz.cx);
+					rrect.size.height = static_cast<float>(sz.cy);
+					rrect.angle =e.m_rect.angle;
+					m_tag_data[i].m_id_rect = rrect;
+					pDC->SelectObject(old_font);
+					font.DeleteObject();
 				}
 				pDC->SelectObject(old_pen);
 				pen.DeleteObject();
@@ -319,34 +455,54 @@ void TagView::OnPaint(CDC* pDC) {
 		}
 	} else {
 		m_img_rect = CRect(0, 0, 0, 0);
-		DrawBitmap(pDC, rect_image, IDB_USAGE);
+		DrawBitmap(pDC, rect_image, GetTheme().ResourceUsage());
 	}
-	DrawAlphaBlend(pDC);
-
-
+	
 	pDC->SelectObject(old_pen);
 	pDC->SelectObject(old_brush);
 	if (focused != -1) {
 		if (m_tag_data[focused].m_class >= static_cast<int>(m_list_class->m_data.size())) {
-			m_stc_box_class->m_text.Format(TEXT("class : Unknown(%d)"), m_tag_data[focused].m_class);
-			m_stc_box_class->m_color_text = &g_tag_color_text_red;
+			OStringStream oss;
+			oss << TEXT("class : Unknown(") << m_tag_data[focused].m_class << TEXT(")");
+			m_stc_box_class->m_text = oss.str();
+			///m_stc_box_class->m_color_text = &g_tag_color_text_red;
 		} else {
 			if (m_tag_data[focused].m_class != -100) {
-				m_stc_box_class->m_text.Format(TEXT("class : %s(%d)"), m_list_class->m_data[m_tag_data[focused].m_class].first, m_tag_data[focused].m_class);
+				OStringStream oss;
+				oss << TEXT("class : ") << m_list_class->m_data[m_tag_data[focused].m_class].first << TEXT("(") << m_tag_data[focused].m_class << TEXT(")");
+				m_stc_box_class->m_text = oss.str();
 			} else {
-				m_stc_box_class->m_text.Format(TEXT("class : Ignore(Ignore)"));
+				m_stc_box_class->m_text=TEXT("class : Ignore(Ignore)");
 			}
-			m_stc_box_class->m_color_text = &g_tag_color_text_purple;
+			///m_stc_box_class->m_color_text = &g_tag_color_text_purple;
 		}
-		m_stc_box_center->m_text.Format(TEXT("X : %f , Y : %f"), m_tag_data[focused].m_rect.center.x, m_tag_data[focused].m_rect.center.y);
-		m_stc_box_size->m_text.Format(TEXT("W : %f , H : %f"), m_tag_data[focused].m_rect.size.width, m_tag_data[focused].m_rect.size.height);
-		m_stc_box_angle->m_text.Format(TEXT("Angle : %f"), -m_tag_data[focused].m_rect.angle);
-		m_stc_box_class->OnPaint(pDC);
-		m_stc_box_center->OnPaint(pDC);
-		m_stc_box_size->OnPaint(pDC);
-		m_stc_box_angle->OnPaint(pDC);
+		{
+			OStringStream oss;
+			oss << TEXT("X(") << m_tag_data[focused].m_rect.center.x << TEXT("), Y(") << m_tag_data[focused].m_rect.center.y
+				<< TEXT("), W(") << m_tag_data[focused].m_rect.size.width << TEXT("), H(") << m_tag_data[focused].m_rect.size.height << TEXT(")");
+			m_stc_box_coord->m_text = oss.str();
+		}
+		{
+			OStringStream oss;
+			oss << TEXT("Angle(") << -m_tag_data[focused].m_rect.angle << TEXT(")");
+			if (m_chk_showid->check == true) {
+				oss << TEXT(", ID(") << m_tag_data[focused].m_id << TEXT(")");
+			}
+			m_stc_box_angle->m_text = oss.str();
+		}
 	}
-	if (g_exporting == true) {
+	MCALL;
+	if (m_chk_crosshair->check == true) {
+		DrawCrosshair(pDC, m_img_rect);
+	}
+	if (m_chk_magnifier->check == true) {
+		DrawLens(pDC, m_img_rect);
+	}
+	if (m_list_class->m_data.size() == 0) {
+		CRect rect = m_list_class->m_rect.GetRect(this->GetViewRect());
+		DrawBitmap(pDC, rect, GetTheme().ResourceNoList());
+	}
+	if (GetApp().g_exporting == true) {
 		ShowProgressBar(pDC, this->GetViewRect());
 	}
 }
@@ -358,44 +514,47 @@ void TagView::OnKillFocus(CWnd* pNewWnd) {
 }
 
 void TagView::OnLButtonDown(UINT nFlags, CPoint point) {
-	if (g_exporting == true)return;
-	VirtualView::OnLButtonDown(nFlags, point);
+	if (GetApp().g_exporting == true)return;
+	AfxGetMainWnd()->SendMessage(MSPRING_DISABLE_HTTEST, 1);
+	MCALL;
+	if (m_btn_pen_style->isClicked()) {
+		int n = m_pen_style;
+		n = (n + 1) % 3;
+		m_pen_style = (n);
+	}
+	point = this->GetMousePoint();
 	::SetFocus(this->m_parent->GetSafeHwnd());
-	m_list_class->OnLButtonDown();
 	if ((GetAsyncKeyState(VK_RBUTTON) & 0x8000)) {
-		//R button 이 작업중이면 무시
-		return;
+		return;		//R button 이 작업중이면 무시
 	}
 	m_l_down = this->GetMousePoint();
-	if (m_chk_tracking->OnLButtonDown() == M_CLICKED) {
-		*g_is_tracking = m_chk_tracking->check;
+	*GetApp().g_is_tracking = m_chk_tracking->check;
+	
+	if (m_list_class->m_select == -1 && m_img_rect.PtInRect(point)) {
+		TSpringMsgBox msgbox(TEXT("Please, make class list before tagging"));
+		msgbox.DoModal();
+		AfxGetMainWnd()->SendMessage(MSPRING_DISABLE_HTTEST, 0);
+		return;
 	}
-	if (m_chk_edit->OnLButtonDown() == M_CLICKED) {
-		if (m_chk_edit->check == false) {
-			//에디트 체크를 해지하면 커서를 화살표(기본) 으로 변경
+	if (m_chk_edit->isChanged() && m_chk_edit->check == true) {
+		if (m_chk_edit->check == false) {	//에디트 체크를 해지하면 커서를 화살표(기본) 으로 변경
 			m_is_edit = false;
 			m_edit_idx = -1;
-			g_degree = -1;
+			GetApp().g_degree = -1;
 			AfxGetMainWnd()->SendMessage(WM_SETCURSOR);
 		}
 		return;
 	}
 	if (m_chk_edit->check == false) {	//Tag start
-		point = this->GetMousePoint();
-		if (m_list_class->m_select == -1) {
-			this->m_parent->MessageBox(TEXT("Please, make class list before tagging"));
-			return;
-		}
 		if (m_list_class->m_select != -1 && m_img_rect.PtInRect(point)) {
 			m_drag_point = point;
 			m_angle = 0;
 			cv::RotatedRect rrect = this->GetRotatedRect(m_drag_point, m_drag_point, m_angle);
 			if ((GetAsyncKeyState('q') & 0x8000) || (GetAsyncKeyState('Q') & 0x8000)) {
-				m_tag_data.push_back(TagInfo(-100, rrect));
+				m_tag_data.push_back(TagInfo(-100, rrect,-1));
 			} else {
-				m_tag_data.push_back(TagInfo(m_list_class->m_select, rrect));
+				m_tag_data.push_back(TagInfo(m_list_class->m_select, rrect,-1));
 			}
-
 			this->m_parent->SetTimer(MOUSE_LEAVE_TIMER_ID, 10, nullptr);
 		}
 	} else {		//Edit start
@@ -410,15 +569,15 @@ void TagView::OnLButtonDown(UINT nFlags, CPoint point) {
 	}
 }
 void TagView::OnLButtonUp(UINT nFlags, CPoint point) {
-	if (g_exporting == true)return;
-	VirtualView::OnLButtonUp(nFlags, point);
-	m_list_class->OnLButtonUp();
+	if (GetApp().g_exporting == true)return;
+	AfxGetMainWnd()->SendMessage(MSPRING_DISABLE_HTTEST, 0);
+	MCALL;
 	this->m_parent->KillTimer(MOUSE_LEAVE_TIMER_ID);
 	if (m_chk_edit->check == false) {	//Tag end
 		m_drag_point.x = -1;
 		m_drag_point.y = -1;
 		if (m_tag_data.empty() == false) {
-			if (m_tag_data.back().m_rect.size.width < 32 || m_tag_data.back().m_rect.size.height < 32) {
+			if (m_tag_data.back().m_rect.size.width < 32 && m_tag_data.back().m_rect.size.height < 32) {
 				m_tag_data.pop_back();
 			}
 		}
@@ -429,31 +588,67 @@ void TagView::OnLButtonUp(UINT nFlags, CPoint point) {
 	WriteTagFile();
 }
 void TagView::OnLButtonDblClk(UINT nFlags, CPoint point) {
-	if (g_exporting == true)return;
+	if (GetApp().g_exporting == true)return;
+	MCALL;
 	VirtualView::OnLButtonDblClk(nFlags, point);
 }
 void TagView::OnRButtonDown(UINT nFlags, CPoint point) {
-	if (g_exporting == true)return;
-	VirtualView::OnRButtonDown(nFlags, point);
+	if (GetApp().g_exporting == true)return;
 
 	if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000)) {
-		//L 버튼이 작업중이면 무시
-		return;
+		return;		//L 버튼이 작업중이면 무시
 	}
+	MCALL;
 	m_r_down = this->GetMousePoint();
-
 	this->m_parent->Invalidate();
 }
 void TagView::OnRButtonUp(UINT nFlags, CPoint point) {
-	if (g_exporting == true)return;
+	if (GetApp().g_exporting == true)return;
 	if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000)) {
 		return;
 	}
-	VirtualView::OnRButtonUp(nFlags, point);
-	m_list_class->OnRButtonUp();
+	MCALL;
 	if (m_tag_data.size() == 0) {
 		return;
 	}
+	if(m_chk_edit->check==false && m_chk_showid->check==true){
+		int idx = this->GetFocusedTag(true);
+		if (idx != -1) {
+			std::vector<int> previd = this->GetPreviousIDs();
+			MSpringMenu popup(this->m_parent);
+			popup.CreatePopupMenu();
+			for (int i = 0; i<previd.size(); i++) {
+				CString str;
+				str.Format(TEXT("ID : %d"), previd[i]);
+				popup.AppendMenu(MF_STRING, i + 1, str);
+			}
+			popup.AppendMenu(MF_STRING, previd.size() + 1, TEXT("New ID"));
+			popup.AppendMenu(MF_STRING, previd.size() + 2, TEXT("Remove Tag"));
+			popup.AppendMenu(MF_STRING, previd.size() + 3, TEXT("Input"));
+			popup.MakeItemsOwnDraw();
+			GetCursorPos(&point);
+			int menu_id = popup.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON | TPM_RETURNCMD, point.x, point.y, this->m_parent);
+			popup.DestroyMenu();
+			if (menu_id == 0) {
+
+			} else if (menu_id < previd.size() + 1) {
+				m_tag_data[idx].m_id = previd[menu_id - 1];
+			} else if (menu_id == previd.size() + 1) {
+				m_tag_data[idx].m_id = GetApp().g_id++;
+			} else if (menu_id == previd.size() + 2) {
+				m_tag_data.erase(m_tag_data.begin() + idx);
+			} else {
+				int id = 0;
+				InputBox dlg(NULL, id);
+				if (dlg.DoModal() == IDOK) {
+					m_tag_data[idx].m_id = id;
+				}
+			}
+			WriteTagFile();
+			return;
+		}
+	}
+
 	if (m_chk_edit->check == false) {
 		int idx = this->GetFocusedTag();
 		if (idx != -1) {
@@ -471,14 +666,13 @@ void TagView::OnRButtonUp(UINT nFlags, CPoint point) {
 	WriteTagFile();
 }
 BOOL TagView::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt) {
-	if (g_exporting == true)return FALSE;
-	VirtualView::OnMouseWheel(nFlags, zDelta, pt);
-	m_list_class->OnMouseWheel(zDelta);
+	if (GetApp().g_exporting == true)return FALSE;
+	MCALL;
 	CPoint point = this->GetMousePoint();
 	if (m_chk_edit->check == false) {	//Tag mode
 		if (m_drag_point.x != -1 && m_drag_point.y != -1) {	//if Draging
 			if (m_tag_data.back().m_class != -100) {
-				if (*g_is_rmid == true || *g_is_r2pt == true) {
+				if (*GetApp().g_is_rmid == true || *GetApp().g_is_r2pt == true) {
 					int val = 3;
 					if ((::GetKeyState(VK_CONTROL) & 0x8000) == 0x8000) {
 						val = 1;
@@ -499,11 +693,8 @@ BOOL TagView::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt) {
 	return TRUE;
 }
 void TagView::OnMouseMove(UINT nFlags, CPoint point) {
-	if (g_exporting == true)return;
-	VirtualView::OnMouseMove(nFlags, point);
-	m_chk_edit->OnMouseMove();
-	m_chk_tracking->OnMouseMove();
-	m_list_class->OnMouseMove();
+	if (GetApp().g_exporting == true)return;
+	
 	if (m_chk_edit->check == false) {	//Tag mode
 		if (m_drag_point.x != -1 && m_drag_point.y != -1) {
 			UpdateTagInfo();
@@ -517,6 +708,8 @@ void TagView::OnMouseMove(UINT nFlags, CPoint point) {
 			rrect.center.y = m_move_base.y + (point.y - m_l_down.y)*m_img.rows / m_img_rect.Height();
 			if (this->isBoundaryViolation(rrect) == false) {
 				m_tag_data[m_edit_idx].m_rect = rrect;
+			} else {
+				m_tag_data[m_edit_idx].m_rect = SetRectInBoundary(rrect);
 			}
 			return;
 		}
@@ -581,7 +774,37 @@ void TagView::OnMouseMove(UINT nFlags, CPoint point) {
 				}
 				if (this->isBoundaryViolation(rrect) == false) {
 					m_tag_data[m_edit_idx].m_rect = rrect;
+				} else if(m_tag_data[m_edit_idx].m_rect.angle==0){
+					float x1=-1, y1=-1, x2=-1, y2=-1;
+					if (rrect.center.x + rrect.size.width / 2 >= m_img.cols) {	//Right Side
+						x1 = m_tag_data[m_edit_idx].m_rect.center.x - m_tag_data[m_edit_idx].m_rect.size.width / 2;
+						y1 = m_tag_data[m_edit_idx].m_rect.center.y - m_tag_data[m_edit_idx].m_rect.size.height / 2;
+						x2 = static_cast<float>(m_img.cols - 1);
+						y2 = m_tag_data[m_edit_idx].m_rect.center.y + m_tag_data[m_edit_idx].m_rect.size.height / 2;
+					} else if (rrect.center.x - rrect.size.width / 2 < 0) {		//Left Side
+						x1 = 0;
+						y1 = m_tag_data[m_edit_idx].m_rect.center.y - m_tag_data[m_edit_idx].m_rect.size.height / 2;
+						x2 = m_tag_data[m_edit_idx].m_rect.center.x + m_tag_data[m_edit_idx].m_rect.size.width / 2;
+						y2 = m_tag_data[m_edit_idx].m_rect.center.y + m_tag_data[m_edit_idx].m_rect.size.height / 2;
+					} else if (rrect.center.y + rrect.size.height / 2 >= m_img.rows) {	//Bottom Side
+						x1 = m_tag_data[m_edit_idx].m_rect.center.x - m_tag_data[m_edit_idx].m_rect.size.width / 2;
+						x2 = m_tag_data[m_edit_idx].m_rect.center.x + m_tag_data[m_edit_idx].m_rect.size.width / 2;
+						y1 = m_tag_data[m_edit_idx].m_rect.center.y - m_tag_data[m_edit_idx].m_rect.size.height / 2;
+						y2 = static_cast<float>(m_img.rows - 1);
+					} else if (rrect.center.y - rrect.size.height / 2 < 0) {	//Top Side
+						x1 = m_tag_data[m_edit_idx].m_rect.center.x - m_tag_data[m_edit_idx].m_rect.size.width / 2;
+						x2 = m_tag_data[m_edit_idx].m_rect.center.x + m_tag_data[m_edit_idx].m_rect.size.width / 2;
+						y1 = 0;
+						y2 = m_tag_data[m_edit_idx].m_rect.center.y + m_tag_data[m_edit_idx].m_rect.size.height / 2;
+					}
+					if (x1 != -1 && y1 != -1 && x2 != -1 && y2 != -1) {
+						m_tag_data[m_edit_idx].m_rect.center.x=(x1+x2)/2;
+						m_tag_data[m_edit_idx].m_rect.center.y = (y1 + y2) / 2;
+						m_tag_data[m_edit_idx].m_rect.size.width = std::fabs(x2 - x1);
+						m_tag_data[m_edit_idx].m_rect.size.height = std::fabs(y2 - y1);
+					}
 				}
+				
 			}
 			return;
 		} else {
@@ -649,24 +872,23 @@ void TagView::OnMouseMove(UINT nFlags, CPoint point) {
 				m_is_side = false;
 				int d1 = 359 - GetDegree360(min_segment_pt[0][0].x, min_segment_pt[0][0].y, min_segment_pt[0][1].x, min_segment_pt[0][1].y);
 				int d2 = 359 - GetDegree360(min_segment_pt[1][0].x, min_segment_pt[1][0].y, min_segment_pt[1][1].x, min_segment_pt[1][1].y);
-				g_degree = ((d1 + d2) / 2 + 90) % 180;
+				GetApp().g_degree = ((d1 + d2) / 2 + 90) % 180;
 				m_is_resize = true;
 			} else if (min_dist < 5) {
 				m_is_side = true;
 				m_is_resize = true;
-				g_degree = 179 - ispring::CVGeometry::GetDegree(cv::Point2f(min_segment[0].x, min_segment[0].y), cv::Point2f(min_segment[1].x, min_segment[1].y));
+				GetApp().g_degree = 179 - ispring::CVGeometry::GetDegree(cv::Point2f(min_segment[0].x, min_segment[0].y), cv::Point2f(min_segment[1].x, min_segment[1].y));
 			} else {
-				g_degree = -1;
+				GetApp().g_degree = -1;
 			}
 			AfxGetMainWnd()->SendMessage(WM_SETCURSOR);
 		}
 	}
+	MCALL;
 }
 void TagView::OnMouseLeave() {
-	if (g_exporting == true)return;
-	VirtualView::OnMouseLeave();
-	m_list_class->OnMouseLeave();
-
+	if (GetApp().g_exporting == true)return;
+	MCALL;
 }
 
 BOOL TagView::OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message) {
@@ -677,14 +899,11 @@ void TagView::OnSize(UINT nType, int cx, int cy) {
 	VirtualView::OnSize(nType, cx, cy);
 }
 void TagView::OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags) {
-	auto IsKeyDown = [](char key)->bool {
-		return ((::GetKeyState(key) & 0x8000) == 0x8000);
-	};
-	if (g_exporting == true)return;
-	VirtualView::OnKeyUp(nChar, nRepCnt, nFlags);
-	if (IsKeyDown('D')) {
-		if (g_image_data->size() != 0) {
-			if (*g_is_tracking == true) {
+	if (GetApp().g_exporting == true)return;
+	MCALL;
+	if (nChar=='d' || nChar=='D') {
+		if (GetApp().g_image_data->size() != 0) {
+			if (*GetApp().g_is_tracking == true) {
 				this->TrackObject();
 			}
 		}
@@ -694,9 +913,8 @@ void TagView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) {
 	auto IsKeyDown = [](char key)->bool {
 		return ((::GetKeyState(key) & 0x8000) == 0x8000);
 	};
-	if (g_exporting == true)return;
-	VirtualView::OnKeyDown(nChar, nRepCnt, nFlags);
-	m_list_class->OnKeyDown(nChar);
+	if (GetApp().g_exporting == true)return;
+	MCALL;
 	if (m_chk_edit->check == false) {	//Tag mode
 		if (m_drag_point.x != -1 && m_drag_point.y != -1) {
 			switch (nChar) {
@@ -717,17 +935,43 @@ void TagView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) {
 			mspring::SetRange(m_drag_point.y, 0L, (LONG)m_img_rect.Height() - 1L);
 			UpdateTagInfo();
 			this->m_parent->Invalidate();
+		} else {
+			switch (nChar) {
+				case VK_LEFT: {
+					CPoint cursor;
+					GetCursorPos(&cursor);
+					SetCursorPos(cursor.x - 1, cursor.y);
+				}break;
+				case VK_RIGHT: {
+					CPoint cursor;
+					GetCursorPos(&cursor);
+					SetCursorPos(cursor.x + 1, cursor.y);
+				}break;
+				case VK_UP: {
+					CPoint cursor;
+					GetCursorPos(&cursor);
+					SetCursorPos(cursor.x, cursor.y - 1);
+				}break;
+				case VK_DOWN: {
+					CPoint cursor;
+					GetCursorPos(&cursor);
+					SetCursorPos(cursor.x, cursor.y + 1);
+				}break;
+			}
 		}
+	} 
+	if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000)) {
+		return;
 	}
 	//==
 	if (IsKeyDown('A')) {
-		if (g_image_data->size() != 0) {
-			g_tag_idx = static_cast<int>((g_tag_idx - 1 + g_image_data->size()) % g_image_data->size());
+		if (GetApp().g_image_data->size() != 0) {
+			GetApp().g_tag_idx = static_cast<int>((GetApp().g_tag_idx - 1 + GetApp().g_image_data->size()) % GetApp().g_image_data->size());
 		}
 	} else if (IsKeyDown('D')) {
-		if (g_image_data->size() != 0) {
-			if (*g_is_tracking == false) {
-				g_tag_idx = (g_tag_idx + 1) % g_image_data->size();
+		if (GetApp().g_image_data->size() != 0) {
+			if (*GetApp().g_is_tracking == false) {
+				GetApp().g_tag_idx = (GetApp().g_tag_idx + 1) % GetApp().g_image_data->size();
 			}
 		}
 	} else if (IsKeyDown('W')) {
@@ -743,11 +987,11 @@ void TagView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) {
 		if (m_chk_edit->check == false) {
 			m_is_edit = false;
 			m_edit_idx = -1;
-			g_degree = -1;
+			GetApp().g_degree = -1;
 			AfxGetMainWnd()->SendMessage(WM_SETCURSOR);
 		}
 	} else if (IsKeyDown('T')) {
-		*g_is_tracking = !*g_is_tracking;
+		*GetApp().g_is_tracking = !*GetApp().g_is_tracking;
 	} else if (IsKeyDown('R')) {
 		int focused = this->GetFocusedTag();
 		if (focused != -1) {
@@ -756,14 +1000,18 @@ void TagView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) {
 			std::swap(m_tag_data[focused].m_rect.size.width, m_tag_data[focused].m_rect.size.height);
 			this->WriteTagFile();
 		}
+	} else if (IsKeyDown('C')) {
+		m_chk_crosshair->check = !m_chk_crosshair->check;
+	} else if (IsKeyDown('I')) {
+		m_chk_showid->check = !m_chk_showid->check;
+	} else if (IsKeyDown('M')) {
+		m_chk_magnifier->check = !m_chk_magnifier->check;
 	}
-
 }
 
 void TagView::OnTimer(UINT_PTR nIDEvent) {
-	if (g_exporting == true)return;
-	VirtualView::OnTimer(nIDEvent);
-	m_list_class->OnTimer(nIDEvent);
+	if (GetApp().g_exporting == true)return;
+	MCALL;
 
 	if (nIDEvent == MOUSE_LEAVE_TIMER_ID) {
 		if (!(GetAsyncKeyState(VK_LBUTTON) & 0x8000)) {	//LBtn이 끝났으면
@@ -775,15 +1023,14 @@ void TagView::OnTimer(UINT_PTR nIDEvent) {
 
 }
 void TagView::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags) {
-	if (g_exporting == true)return;
-	VirtualView::OnChar(nChar, nRepCnt, nFlags);
+	if (GetApp().g_exporting == true)return;
+	MCALL;
 	if (m_drag_point.x != -1 && m_drag_point.y != -1) {
 		return;
 	}
-
 }
 LRESULT TagView::OnComposition(WPARAM wParam, LPARAM lParam) {
-	if (g_exporting == true)return FALSE;
-	VirtualView::OnComposition(wParam, lParam);
+	if (GetApp().g_exporting == true)return 0;
+	MCALL;
 	return 1;
 }

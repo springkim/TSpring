@@ -1,10 +1,8 @@
 ﻿#pragma once
 #include<array>
 
-#include"mspring/view.h"
-#include"mspring/control.h"
+#include"MSpring/MSpring.h"
 #include"ispring/All.h"
-#include"repository.h"
 #include"resource.h"
 #include<opencv2/opencv.hpp>
 
@@ -12,25 +10,41 @@
 #include<wykobi/wykobi.hpp>
 #include<wykobi/wykobi_math.hpp>
 #include<wykobi/wykobi_algorithm.hpp>
-
+#include"Theme.h"
+#include"InputBox.h"
+#include"TSpringMsgBox.h"
 class TagView : public VirtualView {
 	const int MOUSE_LEAVE_TIMER_ID = 0x11110004;
 public:
-	MListBox* m_list_class;
+	MListBox m_list_class;
 	
-	MStatic* m_stc_path;
-	MStatic* m_stc_tag_info;
+	MStatic m_stc_path;
+	MStatic m_stc_tag_info;
 
-	MStatic* m_stc_box_class;
-	MStatic* m_stc_box_center;
-	MStatic* m_stc_box_size;
-	MStatic* m_stc_box_angle;
+	MStatic m_stc_box_class;
+	MStatic m_stc_box_coord;
+	MStatic m_stc_box_angle;
 
-	MButtonCheck* m_chk_edit;
-	MStatic* m_stc_edit;
+	MButton m_btn_pen_style;
+	//enum PenStyle {
+	//	Light, Heavy, Thin
+	//}
+	int m_pen_style = 0;
 
-	MButtonCheck* m_chk_tracking;
-	MStatic* m_stc_tracking;
+	MButtonCheck m_chk_crosshair;
+	MStatic m_stc_crosshair;
+
+	MButtonCheck m_chk_magnifier;
+	MStatic m_stc_magnifier;
+
+	MButtonCheck m_chk_showid;
+	MStatic m_stc_showid;
+
+	MButtonCheck m_chk_edit;
+	MStatic m_stc_edit;
+
+	MButtonCheck m_chk_tracking;
+	MStatic m_stc_tracking;
 
 	cv::Mat m_img;
 	CRect m_img_rect;
@@ -64,23 +78,20 @@ protected:
 	cv::Point2f m_move_base;
 protected:
 	void TrackObject() {
-		int& tag_idx = g_tag_idx;
-		if (tag_idx + 1 >= g_image_data->size()) {
+		auto& tag_idx = GetApp().g_tag_idx;
+		if (tag_idx + 1 >= GetApp().g_image_data->size()) {
 			return;
 		}
 		std::vector<TagInfo> prev_tag = m_tag_data;
-		tag_idx = (tag_idx + 1) % g_image_data->size();
-		CString& c_img_path = g_image_data->at(tag_idx).first;
+		tag_idx = (tag_idx + 1) % GetApp().g_image_data->size();
+		TString& c_img_path = GetApp().g_image_data->at(tag_idx).first;
 		std::string img_path = mspring::String::ToString(c_img_path);
 		std::string tsp_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsp";
-		/*if (ispring::File::FileExist(tsp_path) == true) {
-			return;
-		}*/
 		this->ReadTagFile();
 
 		cv::Mat prev;
 		cv::cvtColor(m_img, prev, CV_BGR2GRAY);
-		cv::Mat curr = cv::imread(mspring::String::ToString(g_image_data->at(tag_idx).first), cv::IMREAD_GRAYSCALE);
+		cv::Mat curr = cv::imread(mspring::String::ToString(GetApp().g_image_data->at(tag_idx).first), cv::IMREAD_GRAYSCALE);
 		auto GetMaxIOU = [](cv::Rect2d a, std::vector<TagInfo> dst)->double {
 			double iou = 0.0F;
 			for (auto&e : dst) {
@@ -120,7 +131,7 @@ protected:
 						rrect.size.width = static_cast<float>(rect.width);
 						rrect.size.height = static_cast<float>(rect.height);
 						rrect.angle = 0;
-						m_tag_data.push_back(TagInfo(e.m_class, rrect));
+						m_tag_data.push_back(TagInfo(e.m_class, rrect,e.m_id));
 					}
 				}
 			}
@@ -138,7 +149,8 @@ protected:
 				<< data.m_rect.center.y << "\t"
 				<< data.m_rect.size.width << "\t"
 				<< data.m_rect.size.height << "\t"
-				<< data.m_rect.angle << std::endl;
+				<< data.m_rect.angle << "\t" 
+				<< data.m_id << std::endl;
 		}
 		fout.close();
 		if (m_tag_data.size() == 0) {
@@ -146,8 +158,41 @@ protected:
 		}
 
 	}
-	int GetFocusedTag() {
-		if (g_exporting == true)return -1;
+	std::vector<int> GetPreviousIDs() {
+		std::set<int> ids;
+		std::vector<int> idv;
+		if (GetApp().g_tag_idx - 1 < 0) {
+			return idv;
+		}
+		TString& c_img_path = GetApp().g_image_data->at(GetApp().g_tag_idx - 1).first;
+		std::string img_path = mspring::String::ToString(c_img_path);
+		std::string tsp_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsp";
+		std::fstream fin;
+		fin.open(tsp_path, std::ios::in);
+		if (fin.is_open() == false) {
+			return idv;
+		}
+		while (fin.eof() == false) {
+			std::istringstream iss;
+			std::string line;
+			std::getline(fin, line);
+			if (line.empty() == true) {
+				continue;
+			}
+			iss.str(line);
+			int _class;
+			cv::RotatedRect rr;
+			int id;
+			iss >> _class >> rr.center.x >> rr.center.y >> rr.size.width >> rr.size.height >> rr.angle >> id;
+			ids.insert(id);
+		}
+		for (auto&e : ids) {
+			idv.push_back(e);
+		}
+		return idv;
+	}
+	int GetFocusedTag(bool id=false) {
+		if (GetApp().g_exporting == true)return -1;
 		if (m_tag_data.size() == 0) {
 			return -1;
 		}
@@ -165,13 +210,22 @@ protected:
 		}
 		CPoint point = this->GetMousePoint();
 		cv::Point2f rpt;
-		rpt.x = static_cast<float>((point.x - m_img_rect.left)*m_img.cols / m_img_rect.Width());
-		rpt.y = static_cast<float>((point.y - m_img_rect.top)* m_img.rows / m_img_rect.Height());
+		if (id == false) {
+			rpt.x = static_cast<float>((point.x - m_img_rect.left)*m_img.cols / m_img_rect.Width());
+			rpt.y = static_cast<float>((point.y - m_img_rect.top)* m_img.rows / m_img_rect.Height());
+		} else {
+			rpt.x = static_cast<float>(point.x);
+			rpt.y = static_cast<float>(point.y);
+		}
 		float min_area = std::numeric_limits<float>::max();
 		int ret = -1;
 		for (int i = 0; i < m_tag_data.size(); i++) {
 			cv::Point2f pt[4];
-			m_tag_data[i].m_rect.points(pt);
+			if (id==false) {
+				m_tag_data[i].m_rect.points(pt);
+			} else {
+				m_tag_data[i].m_id_rect.points(pt);
+			}
 			if (ispring::CVGeometry::PtInRectangle(rpt, pt[0], pt[1], pt[2], pt[3]) == true) {
 				if (min_area > m_tag_data[i].m_rect.size.width*m_tag_data[i].m_rect.size.height) {
 					min_area = m_tag_data[i].m_rect.size.width*m_tag_data[i].m_rect.size.height;
@@ -210,18 +264,7 @@ protected:
 		cvp2.x = static_cast<float>(p2.x *m_img.cols / m_img_rect.Width());
 		cvp2.y = static_cast<float>(p2.y *m_img.rows / m_img_rect.Height());
 		if (m_is_edit == false) {
-			if (*g_is_square == true) {
-				//Make rectangle to square
-				float x_dist = std::fabs(cvp1.x - cvp2.x);
-				float y_dist = std::fabs(cvp1.y - cvp2.y);
-				float direct[2] = { 1.0,-1.0F };
-				if (x_dist < y_dist) {
-					cvp2.y = cvp1.y + (x_dist)* direct[cvp1.y > cvp2.y];
-				} else {
-					cvp2.x = cvp1.x + (y_dist)* direct[cvp1.x > cvp2.x];
-				}
-			}
-			if (*g_is_square == true || *g_is_rectangle == true) {
+			if (*GetApp().g_is_rectangle == true) {
 				angle = 0;
 			}
 		}
@@ -230,7 +273,7 @@ protected:
 		rrect.center.x = (cvp1.x + cvp2.x) / 2.0F;
 		rrect.center.y = (cvp1.y + cvp2.y) / 2.0F;
 
-		if (*g_is_r2pt == false && m_is_edit == false) {
+		if (*GetApp().g_is_r2pt == false && m_is_edit == false) {
 			rrect.size.width = std::fabs(cvp1.x - cvp2.x);
 			rrect.size.height = std::fabs(cvp1.y - cvp2.y);
 		} else {
@@ -275,11 +318,147 @@ protected:
 		}
 		return !contain;
 	}
+	cv::RotatedRect SetRectInBoundary(cv::RotatedRect rrect) {
+		cv::Point2f pts[4];
+		rrect.points(pts);
+		//4방향 검사
+		float minx = FLT_MAX;
+		float miny = FLT_MAX;
+		float maxx = -FLT_MAX;
+		float maxy = -FLT_MAX;
+		for (int i = 0; i < 4; i++) {
+			minx = mspring::Min(minx,pts[i].x);
+			miny = mspring::Min(miny, pts[i].y);
+			maxx = mspring::Max(maxx, pts[i].x);
+			maxy = mspring::Max(maxy, pts[i].y);
+		}
+		if (minx < 0.0F) {
+			rrect.center.x += -minx;
+		}
+		if (miny < 0.0F) {
+			rrect.center.y += -miny;
+		}
+		if (maxx >= m_img.cols) {
+			rrect.center.x -= (maxx - m_img.cols-1);
+		}
+		if (maxy >= m_img.rows) {
+			rrect.center.y -= (maxy - m_img.rows - 1);
+		}
+		return rrect;
+	}
+	void DrawCrosshair(CDC* pDC,CRect rect) {
+		CPoint point = this->GetMousePoint();
+		if (rect.PtInRect(point)) {
+			CPen pen;
+			pen.CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
+			CPen* old_pen = pDC->SelectObject(&pen);
+			
+			pDC->MoveTo(rect.left, point.y);
+			pDC->LineTo(rect.right, point.y);
+			pDC->MoveTo(point.x, rect.top);
+			pDC->LineTo(point.x, rect.bottom);
+
+			pDC->SelectObject(old_pen);
+			pen.DeleteObject();
+
+			pen.CreatePen(PS_SOLID, 1, RGB(255, 0, 0));
+			old_pen = pDC->SelectObject(&pen);
+
+			pDC->MoveTo(mspring::Max(point.x-100,rect.left), point.y);
+			pDC->LineTo(mspring::Min(point.x+100,rect.right), point.y);
+			pDC->MoveTo(point.x, mspring::Max(point.y-100,rect.top));
+			pDC->LineTo(point.x, mspring::Min(point.y+100,rect.bottom));
+
+			pDC->SelectObject(old_pen);
+			pen.DeleteObject();
+		}
+	}
+	void DrawLens(CDC* pDC, CRect rect) {
+		auto DrawMat = [](CDC* pDC, cv::Mat img,CRect rect)->void {
+			cv::flip(img, img, 0);
+			//흑백이면 채널을3으로
+			if (img.channels() == 1) {
+				cv::cvtColor(img, img, CV_GRAY2BGR);
+			}
+			if (img.cols != rect.Width() || img.rows != rect.Height()) {
+				int newWidth = static_cast<int>(img.cols*(rect.Height() / (double)img.rows));
+				int newHeight = rect.Height();
+				if (newWidth > rect.Width()) {
+					newWidth = rect.Width();
+					newHeight = static_cast<int>(img.rows*(rect.Width() / (double)img.cols));
+				}
+				cv::resize(img, img, cv::Size(newWidth, newHeight), 0, 0, CV_INTER_NN);
+			}
+			CImage mfcImg;
+			mfcImg.Create(img.cols, img.rows, 24);
+			BITMAPINFO bitInfo = { { sizeof(BITMAPINFOHEADER),img.cols,img.rows,1,24 },0 };
+
+			void* vp = img.data;
+			IplImage* iplimage = nullptr;
+			if (img.cols % 4 != 0 && img.isContinuous()) {
+				iplimage = cvCreateImage(img.size(), 8, img.channels());
+				img.copyTo(cv::cvarrToMat(iplimage));
+				vp = iplimage->imageData;
+			}
+			pDC->SetStretchBltMode(HALFTONE);
+			StretchDIBits(mfcImg.GetDC(), 0, 0, img.cols, img.rows, 0, 0, img.cols, img.rows, vp, &bitInfo, DIB_RGB_COLORS, SRCCOPY);
+			if (iplimage != nullptr) {
+				cvReleaseImage(&iplimage);
+			}
+			mfcImg.BitBlt(*pDC, (rect.Width() - img.cols) / 2 + rect.left, (rect.Height() - img.rows) / 2 + rect.top);
+			mfcImg.ReleaseDC();
+		};
+		CPoint point = this->GetMousePoint();
+		if (rect.PtInRect(point)) {
+			CPoint rpoint = point;
+			cv::Mat img = m_img.clone();
+			cv::resize(img, img, cv::Size(rect.Width(), rect.Height()));
+			rpoint.x -= rect.left;
+			rpoint.y -= rect.top;
+			cv::line(img, cv::Point(0, rpoint.y), cv::Point(img.cols, rpoint.y), cv::Scalar(0, 0, 255), 1);
+			cv::line(img, cv::Point(rpoint.x, 0), cv::Point(rpoint.x, img.rows), cv::Scalar(0, 0, 255), 1);
+
+			int size = 50;
+			if (point.x-size < rect.left) {
+				point.x = rect.left+size;
+			}
+			if (point.x + size >= rect.right) {
+				point.x = rect.right - size - 1;
+			}
+			if (point.y - size < rect.top) {
+				point.y = rect.top+size;
+			}
+			if (point.y + size >= rect.bottom) {
+				point.y = rect.bottom - size - 1;
+			}
+			point.x -= rect.left;
+			point.y -= rect.top;
+			
+			cv::Mat crop = img(cv::Rect(point.x - size, point.y - size, size * 2, size * 2));
+			CRect drawrect;
+			size *= 2;
+			if (point.x < (rect.left + rect.right) / 2) {	//좌측
+				if (point.y < (rect.top + rect.bottom) / 2) {		//좌측상단->우측 하단
+					drawrect = CRect(rect.right - size * 2, rect.bottom - size * 2, rect.right, rect.bottom);
+				} else {												//좌측하단->우측상단
+					drawrect = CRect(rect.right - size * 2, rect.top, rect.right, rect.top + size * 2);
+				}
+			} else {											//우측
+				if (point.y < (rect.top + rect.bottom) / 2) {		//우측상단->좌측하단
+					drawrect=CRect(rect.left, rect.bottom - size * 2, rect.left+size*2, rect.bottom);
+				} else {												//우측하단->좌측상단
+					drawrect= CRect(rect.left, rect.top, rect.left + size * 2, rect.top + size * 2);
+				}
+			}
+			cv::Mat draw = crop.clone();
+			DrawMat(pDC, draw, drawrect);
+		}
+	}
 	void WriteTagFile() {
-		if (g_tag_idx < 0 || g_image_data->empty() == true) {
+		if (GetApp().g_tag_idx < 0 || GetApp().g_image_data->empty() == true) {
 			return;
 		}
-		CString& c_img_path = g_image_data->at(g_tag_idx).first;
+		TString& c_img_path = GetApp().g_image_data->at(GetApp().g_tag_idx).first;
 		std::string img_path = mspring::String::ToString(c_img_path);
 		std::string tsp_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsp";
 		std::fstream fout;
@@ -294,7 +473,8 @@ protected:
 				<< data.m_rect.center.y << "\t"
 				<< data.m_rect.size.width << "\t"
 				<< data.m_rect.size.height << "\t"
-				<< data.m_rect.angle << std::endl;
+				<< data.m_rect.angle << "\t"
+				<< data.m_id << std::endl;
 		}
 		fout.close();
 		if (m_tag_data.size() == 0) {
@@ -302,7 +482,7 @@ protected:
 		}
 	}
 	void ReadTagFile() {
-		CString& c_img_path = g_image_data->at(g_tag_idx).first;
+		TString& c_img_path = GetApp().g_image_data->at(GetApp().g_tag_idx).first;
 		std::string img_path = mspring::String::ToString(c_img_path);
 		std::string tsp_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsp";
 		std::fstream fin;
@@ -321,8 +501,9 @@ protected:
 			iss.str(line);
 			int _class;
 			cv::RotatedRect rr;
-			iss >> _class >> rr.center.x >> rr.center.y >> rr.size.width >> rr.size.height >> rr.angle;
-			m_tag_data.push_back(TagInfo(_class, rr));
+			int _id = -1;
+			iss >> _class >> rr.center.x >> rr.center.y >> rr.size.width >> rr.size.height >> rr.angle >> _id;
+			m_tag_data.push_back(TagInfo(_class, rr,_id));
 		}
 	}
 
@@ -357,4 +538,3 @@ public:
 	void OnChar(UINT nChar, UINT nRepCnt, UINT nFlags)override;
 	LRESULT OnComposition(WPARAM wParam, LPARAM lParam)override;
 };
-

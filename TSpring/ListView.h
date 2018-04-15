@@ -1,68 +1,47 @@
 #pragma once
-#include<cctype>
-#include"mspring/frame.h"
-#include"mspring/view.h"
-#include"mspring/control.h"
-
-#include"ispring/All.h"
 #include<afxstr.h>
+#include<cctype>
+#include<ctime>
+#include"Mspring/MSpring.h"
+#include"Theme.h"
+#include"ispring/All.h"
 
-#include"repository.h"
 #include"resource.h"
-
+#include"TSpringMsgBox.h"
 class ListView :public VirtualView {
-	const int MOUSE_LEAVE_TIMER_ID = 0x11110005;
+	const UINT_PTR MOUSE_LEAVE_TIMER_ID = (UINT_PTR)"MOUSE_LEAVE_TIMER_ID";
 public:
-	MListBox* m_list_image;
+	MListBox m_list_image;
 
-	MListBox* m_list_class;
-	MEdit* m_edit_class;
-	MButton* m_btn_add_class;
-	MButton* m_btn_load_class;
-	MButton* m_btn_export_class;
+	MListBox m_list_class;
+	MSingleEdit m_edit_class;
+	MButton m_btn_add_class;
+	MButton m_btn_load_class;
+	MButton m_btn_export_class;
 
-	MButtonCheck* m_chk_detection;
-	MStatic* m_stc_detection;
-	MButtonCheck* m_chk_segmentation;
-	MStatic* m_stc_segmentation;
+	MButtonCheck m_chk_detection;
+	MStatic m_stc_detection;
+	MButtonCheck m_chk_segmentation;
+	MStatic m_stc_segmentation;
 
-	MButtonCheck* m_chk_square;
-	MStatic* m_stc_square;
-	MButtonCheck* m_chk_rectangle;
-	MStatic* m_stc_rectangle;
-	MButtonCheck* m_chk_r_mid;
-	MStatic* m_stc_r_mid;
-	MButtonCheck* m_chk_r_2pt;
-	MStatic* m_stc_r_2pt;
+	MButtonCheck m_chk_rectangle;
+	MStatic m_stc_rectangle;
+	MButtonCheck m_chk_r_mid;
+	MStatic m_stc_r_mid;
+	MButtonCheck m_chk_r_2pt;
+	MStatic m_stc_r_2pt;
 
-	MButtonCheck* m_chk_tracking;
-	MStatic* m_stc_tracking;
+	MButtonCheck m_chk_tracking;
+	MStatic m_stc_tracking;
 
-	MStatic* m_stc_image;
-	MStatic* m_stc_class;
+	MStatic m_stc_image;
+	MStatic m_stc_class;
 public:
 	ListView(CWnd* wnd);
 	~ListView();
-	void IdentifyTagInfo() {
-		for (auto&e : m_list_image->m_data) {
-			std::string img_path = mspring::String::ToString(e.first);
-			if (m_chk_detection->check == true) {
-				std::string tsp_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsp";
-				if (ispring::File::FileExist(tsp_path) == true) {
-					e.second = true;
-				} else {
-					e.second = false;
-				}
-			} else if (m_chk_segmentation->check == true) {
-				std::string tsps_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsps";
-				if (ispring::File::FileExist(tsps_path) == true) {
-					e.second = true;
-				} else {
-					e.second = false;
-				}
-			}
-		}
-	}
+	
+	void IdentifyTagInfo();
+	void GetFinalID();
 public:
 	int OnCreate()override;
 	void OnDestroy()override;

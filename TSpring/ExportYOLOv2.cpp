@@ -35,7 +35,20 @@ void GenerateCFG(ExportYOLOv2* yolov2,std::string sdir) {
 	static char buffer[65536];
 	std::vector<std::string> images = ispring::File::FileList(sdir + "train/", "*.jpg");
 	std::string ANCHORS = GetAnchors(NUM, WIDTH, images);
-	
+	if (*g_is_dbg_info == true) {
+		std::istringstream iss;
+		iss.str(ANCHORS);
+
+		cv::Mat img = cv::Mat::zeros(HEIGHT, WIDTH, CV_8UC3) + cv::Scalar(255, 255, 255);
+		for (int i = 0; i < NUM; i++) {
+			float a, b;
+			char c;
+			iss >> a >> c >> b >> c;
+			cv::rectangle(img, cv::Rect(10 + i * 5, 10 + i * 5, a * 32, b * 32), ispring::CV::GetRGB(i));
+		}
+		cv::imwrite(sdir + "Debug\\anchors.png", img);
+
+	}
 	sprintf_s(buffer,65536, cfg_format, BATCH, SUBDIVISION, HEIGHT, WIDTH, MAX_BATCHES, FILTERS, ANCHORS.c_str(), CLASSES, NUM, RANDOM);
 	///TODO
 	std::fstream fout;	
@@ -68,7 +81,7 @@ void GenerateCFG(ExportYOLOv2* yolov2,std::string sdir) {
 	fout << "pause";
 	fout.close();
 }
-std::vector<TagInfo> GetTagInfo(std::string img_path, std::vector<int> table) {
+std::vector<TagInfo> GetTagInfo(std::string img_path, std::vector<int> table,bool with_ignore=true) {
 	std::vector<TagInfo> tag_data;
 	std::string tsp_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsp";
 	std::fstream fin;
@@ -93,9 +106,11 @@ std::vector<TagInfo> GetTagInfo(std::string img_path, std::vector<int> table) {
 				if (table[_class] == -1) {	//export 하지 않는 클래스이면 무시
 					continue;
 				}
-				tag_data.push_back(TagInfo(table[_class], rr));
+					tag_data.push_back(TagInfo(table[_class], rr));
 			} else {
-				tag_data.push_back(TagInfo(_class, rr));
+				if (with_ignore == true) {
+					tag_data.push_back(TagInfo(_class, rr));
+				}
 			}
 			
 		}
@@ -328,6 +343,35 @@ void GenFlipTBImages(std::vector<std::string>& train_path, std::string dir) {
 		train_path.push_back(e);
 	}
 }
+void _SaveCropImage(cv::Mat& img, cv::Rect rect,std::string dir,std::string name) {
+	if (*g_is_dbg_info == true) {
+		static size_t idx = 0;
+		static std::string gdir = "";
+		if (gdir.length() == 0) {
+			gdir = dir;
+		}
+		if (gdir != dir) {
+			idx = 0;
+			gdir = dir;
+		}
+		//==begin
+		std::string pure = name.substr(name.find_last_of("/\\") + 1);
+		mspring::SetRange(rect.x, 0, img.cols - 1);
+		mspring::SetRange(rect.y, 0, img.rows - 1);
+		if (rect.x + rect.width >= img.cols) {
+			rect.width = img.cols - rect.x - 1;
+		}
+		if (rect.y + rect.height >= img.rows) {
+			rect.height = img.rows - rect.y - 1;
+		}
+		cv::Mat crop = img(rect).clone();
+		std::ostringstream oss;
+		oss.width(8);
+		oss.fill('0');
+		oss << idx++ << "_" << pure << ".jpg";
+		cv::imwrite(gdir + oss.str(), crop);
+	}
+}
 void GenImages(ExportYOLOv2* yolov2,std::string sdir) {
 	std::string dir_train = sdir + "train\\";
 	std::string dir_valid = sdir + "valid\\";
@@ -338,6 +382,11 @@ void GenImages(ExportYOLOv2* yolov2,std::string sdir) {
 	ispring::File::DirectoryMake(dir_backup);
 	ispring::File::DirectoryMake(dir_bin);
 
+	std::string dir_debug = sdir + "Debug\\";
+	ispring::File::DirectoryMake(dir_debug);
+	std::string dir_debug_crop = dir_debug + "crop\\";
+	ispring::File::DirectoryMake(dir_debug_crop);
+
 	ispring::Web::Download("https://www.dropbox.com/s/3ny3j6ab73scu2g/YOLOv2_Train_SE.exe?dl=1", dir_bin + "YOLOv2_Train_SE.exe");
 	g_progress = 2;
 	ispring::Web::Download("https://www.dropbox.com/s/7g9j1bwgietdiht/cudnn64_5.dll?dl=1", dir_bin + "cudnn64_5.dll");
@@ -346,8 +395,11 @@ void GenImages(ExportYOLOv2* yolov2,std::string sdir) {
 
 	std::vector<std::string> img_original;
 	for (size_t i = 0; i < g_image_data->size(); i++) {
-		std::string file = mspring::String::ToString(g_image_data->at(i).first);
-		img_original.push_back(file);
+		std::string img_path = mspring::String::ToString(g_image_data->at(i).first);
+		std::vector<TagInfo> tags=GetTagInfo(img_path, table,false);
+		if (tags.size() > 0) {
+			img_original.push_back(img_path);
+		}
 	}
 	g_progress = 4;
 	std::vector<std::string> img_train, img_valid;
@@ -436,6 +488,9 @@ void GenImages(ExportYOLOv2* yolov2,std::string sdir) {
 							}
 			
 							cv::Rect rect=cv::boundingRect(ptsi);
+							///SaveCropImage==============================================
+							_SaveCropImage(rimg, rect, dir_debug_crop, img_train[i]);
+							///========================================================
 							rtag[k].m_rect.angle = 0;
 							rtag[k].m_rect.center.x = rect.x + rect.width / 2.0F;
 							rtag[k].m_rect.center.y = rect.y + rect.height / 2.0F;
@@ -472,6 +527,13 @@ void GenImages(ExportYOLOv2* yolov2,std::string sdir) {
 					}
 				}
 			} else {
+				///SaveCropImage==============================================
+				for (size_t j = 0; j < tag.size(); j++) {
+					if (tag[j].m_class != -100) {
+						_SaveCropImage(img, tag[j].m_rect.boundingRect(), dir_debug_crop, img_train[i]);
+					}
+				}
+				///========================================================
 				std::vector<YOLOBOX> yolobox = GetYOLOBOX(img, tag);
 				std::string file_noext = GetOriginalName(img_train[i], dir_train, ".jpg");
 				std::string file_img = file_noext + ".jpg";
@@ -569,6 +631,9 @@ void GenImages(ExportYOLOv2* yolov2,std::string sdir) {
 							}
 
 							cv::Rect rect = cv::boundingRect(ptsi);
+							///SaveCropImage==============================================
+							_SaveCropImage(rimg, rect, dir_debug_crop, img_train[i]);
+							///========================================================
 							rtag[k].m_rect.angle = 0;
 							rtag[k].m_rect.center.x = rect.x + rect.width / 2.0F;
 							rtag[k].m_rect.center.y = rect.y + rect.height / 2.0F;
@@ -603,6 +668,13 @@ void GenImages(ExportYOLOv2* yolov2,std::string sdir) {
 					}
 				}
 			} else {
+				///SaveCropImage==============================================
+				for (size_t j = 0; j < tag.size(); j++) {
+					if (tag[j].m_class != -100) {
+						_SaveCropImage(img, tag[j].m_rect.boundingRect(), dir_debug_crop, img_train[i]);
+					}
+				}
+				///========================================================
 				std::vector<YOLOBOX> yolobox = GetYOLOBOX(img, tag);
 				std::string file_noext = GetOriginalName(img_valid[i], dir_valid, ".jpg");
 				std::string file_img = file_noext + ".jpg";
@@ -928,6 +1000,17 @@ void ExportYOLOv2::OnLButtonDown(UINT nFlags, CPoint point) {
 			dynamic_cast<MButtonCheck*>(m_anchors[i])->check = true;
 		}
 	}
+	m_chk_resolution_random->disable = m_chk_resnet50->check;
+	if (m_chk_resolution_random->disable == true) {
+		m_chk_resolution_random->check = false;
+		bool check = false;
+		for (size_t j = 0; j < m_resolution.size(); j++) {
+			check|=dynamic_cast<MButtonCheck*>(m_resolution[j])->check;
+		}
+		if (check == false) {
+			m_chk_resolution416->check = true;
+		}
+	}
 	for (size_t i = 0; i < m_resolution.size(); i++) {
 		if (m_resolution[i]->OnLButtonDown() == M_CLICKED) {
 			for (size_t j = 0; j < m_resolution.size(); j++) {
@@ -939,11 +1022,7 @@ void ExportYOLOv2::OnLButtonDown(UINT nFlags, CPoint point) {
 	for (size_t i = 0; i < m_noise.size(); i++) {
 		m_noise[i]->OnLButtonDown();
 	}
-	m_chk_resolution_random->disable = m_chk_resnet50->check;
-	if (m_chk_resolution_random->disable == true) {
-		m_chk_resolution_random->check = false;
-		m_chk_resolution416->check = true;
-	}
+	
 }
 void ExportYOLOv2::OnLButtonUp(UINT nFlags, CPoint point) {
 	VirtualView::OnLButtonUp(nFlags, point);

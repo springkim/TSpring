@@ -90,6 +90,11 @@ BEGIN
         MENUITEM "Edit mode",                   ID_EDIT_EDITMODE
         MENUITEM "Tracking mode",               ID_EDIT_TRACKINGMODE
     END
+    POPUP "Theme(&T)"
+    BEGIN
+        MENUITEM "AshSky",                      ID_THEME_ASHSKY
+        MENUITEM "Solarized Dark",              ID_THEME_SOLARIZEDDARK
+    END
     POPUP "Help(&H)"
     BEGIN
         MENUITEM "TSpring information(&A)...",  ID_APP_ABOUT
@@ -122,16 +127,35 @@ END
 // Dialog
 //
 
-IDD_ABOUTBOX DIALOGEX 0, 0, 248, 87
+IDD_ABOUTBOX DIALOGEX 0, 0, 279, 95
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "TSpring information"
 FONT 9, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
-    LTEXT           "TSpring, Version 1.0",IDC_STATIC,19,15,114,8,SS_NOPREFIX
-    LTEXT           "Copyright (C) 2017 kimbomm. All rights reserved.",IDC_STATIC,19,54,212,8
-    DEFPUSHBUTTON   "Close",IDOK,191,66,50,14,WS_GROUP
-    LTEXT           "https://github.com/springkim/TSpring",IDC_STATIC,19,38,169,8,SS_NOPREFIX
-    CONTROL         IDB_TSPRING,IDC_STATIC,"Static",SS_BITMAP,193,15,37,37
+    LTEXT           "TSpring, Version 2.0",IDC_VERSION,19,15,114,8,SS_NOPREFIX
+    LTEXT           "Copyright (C) 2017-2018 kimbomm. All rights reserved.",IDC_STATIC_COPYRIGHT,19,54,212,8
+    DEFPUSHBUTTON   "Close",IDOK,222,74,50,14,WS_GROUP
+    LTEXT           "https://github.com/springkim/TSpring",IDC_STATIC_URL,19,35,169,8,SS_NOPREFIX
+END
+
+IDD_INPUT DIALOGEX 0, 0, 241, 123
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Input"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "Ok",IDOK,127,102,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,184,102,50,14
+    LTEXT           "ID : ",IDC_STATIC_ID,41,52,15,8
+    EDITTEXT        IDC_EDIT1,67,50,134,14,ES_AUTOHSCROLL
+END
+
+IDD_MSGBOX DIALOGEX 0, 0, 255, 84
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Message"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "Oh, okay!",IDOK,185,60,63,14
+    LTEXT           "Static",IDC_MSG,44,31,180,8
 END
 
 
@@ -185,9 +209,25 @@ BEGIN
     IDD_ABOUTBOX, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 241
+        RIGHTMARGIN, 272
         TOPMARGIN, 7
-        BOTTOMMARGIN, 80
+        BOTTOMMARGIN, 88
+    END
+
+    IDD_INPUT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 234
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 116
+    END
+
+    IDD_MSGBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 248
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 77
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -210,9 +250,21 @@ IDB_UNKNOWN_RED         BITMAP                  "res\\unknown_red.bmp"
 
 IDB_UNKNOWN_BLUE        BITMAP                  "res\\unknown_blue.bmp"
 
-IDB_TSPRING             BITMAP                  "res\\TSpring.bmp"
+IDB_TSPRING             BITMAP                  "C:\\Users\\sprin\\Documents\\Git\\TSpring\\TSpring\\res\\TSpring.bmp"
 
-IDB_USAGE               BITMAP                  "res\\TSpring_Usage.bmp"
+IDB_CLOSE_ASHSKY        BITMAP                  "res\\close_ashsky.bmp"
+
+IDB_MAXIMIZE_ASHSKY     BITMAP                  "res\\maximize_ashsky.bmp"
+
+IDB_MINIMIZE_ASHSKY     BITMAP                  "res\\minimize_ashsky.bmp"
+
+IDB_USAGE_ASHSKY        BITMAP                  "res\\TSpring_Usage_AshSky.bmp"
+
+IDB_NOLIST_ASHSKY       BITMAP                  "res\\TSpring_NoList.bmp"
+
+IDB_USAGE_SOLARIZED_DARK BITMAP                  "res\\TSpring_Usage_SolarizedDark.bmp"
+
+IDB_NOLIST_SOLARIZED_DARK BITMAP                  "res\\TSpring_NoList_SolarizedDark.bmp"
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -590,6 +642,24 @@ IDD_ABOUTBOX AFX_DIALOG_LAYOUT
 BEGIN
     0
 END
+
+IDD_INPUT AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_MSGBOX AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// PNG
+//
+
+IDB_ABOUTBOX            PNG                     "res\\TSpring.png"
 
 
 /////////////////////////////////////////////////////////////////////////////
