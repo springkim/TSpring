@@ -51,6 +51,7 @@ public:
 		std::string setting = temp + setting_file;
 		std::ifstream fin;
 		fin.open(setting, std::ios::in);
+		if (fin.is_open() == false)return;
 		fin >> GetTheme().g_idx;
 		int value;
 		fin >> value;

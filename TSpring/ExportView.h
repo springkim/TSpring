@@ -152,17 +152,39 @@ public:
 	MSingleEdit m_edit_name;
 	MButton m_btn_export;
 	MStatic m_stc_name;
-	void DownloadFile(std::string url, std::string file) {
+	static void DownloadFile(std::string url, std::string file) {
 		std::ostringstream oss;
-		oss << "powershell \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New - Object System.Net.WebClient).DownloadFile(\'"
+		oss << "powershell \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile(\'"
 			<< url << "\',\'" << file << "\')\"";
-		WinExec(oss.str().c_str(), SW_HIDE);
+
+		STARTUPINFOA si;
+		ZeroMemory(&si, sizeof(si));
+		si.cb = sizeof(si);
+		si.dwFlags = STARTF_USESHOWWINDOW;
+		si.wShowWindow = SW_HIDE;
+		PROCESS_INFORMATION pi;
+		char buffer[1024] = { 0 };
+		strcpy_s(buffer, 1024, oss.str().c_str());
+		
+		CreateProcessA(
+			NULL,buffer , NULL, NULL,
+			TRUE, 0, NULL, NULL, &si, &pi
+		);
+		WaitForSingleObject(pi.hProcess, INFINITE);
 	}
 	std::deque<MStatic> m_doc;
+	char * ConvertWCtoC(const wchar_t* str) {
+		char* pStr;
+		int strSize = WideCharToMultiByte(CP_ACP, 0, str, -1, NULL, 0, NULL, NULL);
+		pStr = new char[strSize];
+		WideCharToMultiByte(CP_ACP, 0, str, -1, pStr, strSize, 0, 0);
+		return pStr;
+	}
 	bool IsMoreThanNTag(int n) {
 		int C = 0;
 		for (auto &e : *GetApp().g_image_data) {
-			std::string filename(e.first.begin(), e.first.end());
+			//std::string filename(e.first.begin(), e.first.end());
+			char* filename = ConvertWCtoC((e.first.data()));
 			std::vector<TagInfo> taginfo = this->ReadTagInfo(filename);
 			for (auto&f : taginfo) {
 				if (f.m_class != -100) {

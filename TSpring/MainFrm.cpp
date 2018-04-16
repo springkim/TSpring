@@ -63,7 +63,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct) {
 	this->SetIcon(IDR_MAINFRAME);
 	
 	this->SetStyle(GetTheme().Font(), GetTheme().ColorBK(), GetTheme().ColorText(), GetTheme().ColorBorder());
-	this->SetTitle(TEXT("TSpring 2.0"));
+	this->SetTitle(TEXT("TSpring 2.1"));
 	this->SetTitleColor(GetTheme().ColorTitle());
 	m_menu_frame = CreateFrame<MSpringMenuFrame>(this);
 	m_menu_frame->SetStyle(GetTheme().Font(), GetTheme().ColorBK(), GetTheme().ColorText(), GetTheme().ColorHover(), GetTheme().ColorBK());
@@ -340,7 +340,7 @@ LRESULT CMainFrame::OnDisableHtTest(WPARAM wParam, LPARAM lParam) {
 	return 1;
 }
 UINT _UpdateProgram(LPVOID param) {
-	std::string version = "2.0";
+	std::string version = "2.1";
 	char c_temp[MAX_PATH + 1] = { 0 };
 	SHGetSpecialFolderPathA(AfxGetMainWnd()->GetSafeHwnd(), c_temp, CSIDL_COMMON_APPDATA, TRUE);
 	std::string temp = c_temp;
@@ -348,27 +348,25 @@ UINT _UpdateProgram(LPVOID param) {
 		temp += '\\';
 	}
 	std::string verfile =temp+"TSpring_version.txt";
-	std::ostringstream oss;
-	oss << "powershell \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile(\'"
-		<< "https://www.dropbox.com/s/nymwmtwiz0ak093/version.txt?dl=1" << "\',\'" << verfile << "\')\"";
-	WinExec(oss.str().c_str(), SW_HIDE);
+	ExportView::DownloadFile("https://www.dropbox.com/s/nymwmtwiz0ak093/version.txt?dl=1", verfile);
 	std::fstream fin(verfile, std::ios::in);
+	if (fin.is_open() == false) {
+		return 0;
+	}
 	std::string new_version;
 	fin >> new_version;
 	fin.close();
-
+	
 	std::fstream noupdate("noupdate.txt", std::ios::in);
 	if (noupdate.is_open() == true) {
 		noupdate.close();
 	}
-	else if (version != new_version) {
+	else if (std::atof(version.c_str()) < std::atof(new_version.c_str())) {
 		std::string newfile = temp + "TSpring.exe";
 		//Do update
 		//최신버전 먼저 다운로드
 		std::ostringstream oss;
-		oss << "powershell \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile(\'"
-			<< "https://www.dropbox.com/s/npv7xwrtapwcpmi/TSpring.exe?dl=1" << "\',\'" << newfile << "\')\"";
-		WinExec(oss.str().c_str(), SW_HIDE);
+		ExportView::DownloadFile("https://www.dropbox.com/s/npv7xwrtapwcpmi/TSpring.exe?dl=1", newfile);
 
 		std::string updatefile = temp + "TSpring_update.bat";
 		char olddir[MAX_PATH] = { 0 };

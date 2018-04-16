@@ -132,7 +132,7 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSM
 CAPTION "TSpring information"
 FONT 9, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
-    LTEXT           "TSpring, Version 2.0",IDC_VERSION,19,15,114,8,SS_NOPREFIX
+    LTEXT           "TSpring, Version 2.1",IDC_VERSION,19,15,114,8,SS_NOPREFIX
     LTEXT           "Copyright (C) 2017-2018 kimbomm. All rights reserved.",IDC_STATIC_COPYRIGHT,19,54,212,8
     DEFPUSHBUTTON   "Close",IDOK,222,74,50,14,WS_GROUP
     LTEXT           "https://github.com/springkim/TSpring",IDC_STATIC_URL,19,35,169,8,SS_NOPREFIX

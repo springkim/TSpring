@@ -406,7 +406,7 @@ void ExportView::OnLButtonDown(UINT nFlags, CPoint point) {
 			path += TEXT('\\') + type + m_edit_name->m_text + TEXT('\\');
 			GetApp().g_project_name= m_edit_name->m_text;
 			GetApp().g_export_dir = path;
-			ispring::File::DirectoryMake(std::string(path.begin(),path.end()));
+			ispring::File::DirectoryMake(ConvertWCtoC(path.data()));
 			if (m_chk_yolo->check == true) {
 				Export_YOLO();
 			} else if (m_chk_fasterrcnn->check == true) {
@@ -664,7 +664,7 @@ UINT Export_YOLO_T(void* param) {
 	
 	ExportView* _this = reinterpret_cast<ExportView*>(param);
 	TString curr_dir = GetApp().g_export_dir;	//슬래쉬 붙어있음
-	_chdir(std::string(curr_dir.begin(),curr_dir.end()).c_str());
+	_chdir(_this->ConvertWCtoC(curr_dir.data()));
 	std::vector<std::pair<TString, bool>>& images = *GetApp().g_image_data;
 
 	std::fstream fout_train_txt;
@@ -679,9 +679,9 @@ UINT Export_YOLO_T(void* param) {
 	GetApp().g_export_str = TEXT("Download modules");
 	GetApp().g_progress_total = 2;
 	GetApp().g_progress_current = 0;
-	ispring::Web::Download("https://www.dropbox.com/s/mejmd1fd3fqhc2z/YOLOv3SE_Train.exe?dl=1", "bin/YOLOv3SE_Train.exe.exe");
+	_this->DownloadFile("https://www.dropbox.com/s/mejmd1fd3fqhc2z/YOLOv3SE_Train.exe?dl=1", "bin/YOLOv3SE_Train.exe.exe");
 	GetApp().g_progress_current = 1;
-	ispring::Web::Download("https://www.dropbox.com/s/kc9sd1irv95v53w/cudnn64_5.dll?dl=1", "bin/cudnn64_5.dll");
+	_this->DownloadFile("https://www.dropbox.com/s/kc9sd1irv95v53w/cudnn64_5.dll?dl=1", "bin/cudnn64_5.dll");
 	GetApp().g_progress_current = 2;
 
 	GetApp().g_export_str = TEXT("Generate images");
@@ -699,7 +699,7 @@ UINT Export_YOLO_T(void* param) {
 	stat.nOfSamples.assign(nOfClasses, 0);
 	for (size_t i = 0; i < images.size(); i++) {
 		auto& file = images[i].first;
-		_this->GenExportImage(std::string(file.begin(), file.end()), fout_train_txt,stat);
+		_this->GenExportImage(_this->ConvertWCtoC(file.data()), fout_train_txt,stat);
 
 		GetApp().g_progress_current = i + 1;
 	}
@@ -813,10 +813,10 @@ UINT Export_YOLO_T(void* param) {
 			GetApp().g_progress_current = 0;
 			GetApp().g_progress_total = static_cast<int>(files.size());
 			int threads = mspring::Max(omp_get_num_threads() / 2, 1); 
-#pragma omp parallel for schedule(guided) num_threads(threads)
+//#pragma omp parallel for schedule(guided) num_threads(threads)
 			for (int j = 0; (int)j < files.size(); j++) {
 				fout_train_txt << func[i](files[j],DAType::YOLO) << std::endl;
-#pragma omp critical(g_progress_current)
+//#pragma omp critical(g_progress_current)
 				GetApp().g_progress_current++;
 			}
 		}
@@ -829,7 +829,7 @@ UINT Export_YOLO_T(void* param) {
 			GetApp().g_progress_current = 0;
 			GetApp().g_progress_total = static_cast<int>(files.size());
 			int threads = mspring::Max(omp_get_num_threads() / 2, 1);
-#pragma omp parallel for schedule(guided) num_threads(threads)
+//#pragma omp parallel for schedule(guided) num_threads(threads)
 			for (int j = 0; (int)j < files.size(); j++) {
 				if (_this->GetChkBtnByString(_this->m_chk_noise, _this->m_stc_noise, _this->m_str_noise[_this->m_str_noise.size() - 1])->check == true) {
 					fout_train_txt << Generate_GammaCorrection1(files[j]) << std::endl;
@@ -837,7 +837,7 @@ UINT Export_YOLO_T(void* param) {
 				if (_this->GetChkBtnByString(_this->m_chk_noise, _this->m_stc_noise, _this->m_str_noise[_this->m_str_noise.size() - 2])->check == true) {
 					fout_train_txt << Generate_GammaCorrection2(files[j]) << std::endl;
 				}
-#pragma omp critical(g_progress_current)
+//#pragma omp critical(g_progress_current)
 				GetApp().g_progress_current++;
 			}
 		}
@@ -860,7 +860,7 @@ UINT Export_FasterRCNN_T(void* param) {
 	ExportView* _this = reinterpret_cast<ExportView*>(param);
 	_this->rcnn_cnt = 0;
 	TString curr_dir = GetApp().g_export_dir;	//슬래쉬 붙어있음
-	_chdir(std::string(curr_dir.begin(), curr_dir.end()).c_str());
+	_chdir(_this->ConvertWCtoC(curr_dir.data()));
 	std::vector<std::pair<TString, bool>>& images = *GetApp().g_image_data;
 	ispring::File::DirectoryMake("bin");
 	ispring::File::DirectoryMake("train");
@@ -943,7 +943,7 @@ UINT Export_FasterRCNN_T(void* param) {
 	for (auto&e : _this->m_list_class->m_data) {
 		if (e.second == true) {
 			nOfClasses++;
-			std::string c(e.first.begin(), e.first.end());
+			std::string c(_this->ConvertWCtoC(e.first.data()));
 			std::replace(c.begin(), c.end(), ' ', '_');
 			fout_class_txt << c << "\t" << nOfClasses << std::endl;
 		}
@@ -958,7 +958,7 @@ UINT Export_FasterRCNN_T(void* param) {
 	///이미지들 생성
 	for (size_t i = 0; i < images.size(); i++) {
 		auto& file = images[i].first;
-		_this->GenExportImage(std::string(file.begin(), file.end()), fout_train_txt, stat,fout_roi_txt);
+		_this->GenExportImage(_this->ConvertWCtoC(file.data()), fout_train_txt, stat,fout_roi_txt);
 		GetApp().g_progress_current = i + 1;
 	}
 	///태깅정보 생성
