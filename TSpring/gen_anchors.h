@@ -93,16 +93,16 @@ inline std::string GetAnchors(int NUM,int WH,std::vector<std::string> images,boo
 	centroids = KMeans(annotation_dims, centroids,labels);
 
 	if (dbg_info) {
+		for (size_t i = 0; i < annotation_dims.size(); i++) {
+			int W = static_cast<int>(annotation_dims[i].first * 1920);
+			int H = static_cast<int>(annotation_dims[i].second * 1920);
+			cv::circle(img, cv::Point(W, H), 5, ispring::CV::GetRGB(labels[i]), CV_FILLED);
+		}
 		for (size_t i = 0; i < centroids.size(); i++) {
 			int W = static_cast<int>(centroids[i].first * 1920);
 			int H = static_cast<int>(centroids[i].second * 1920);
 			cv::line(img, cv::Point(0, H), cv::Point(W, H), cv::Scalar(255, 255, 255), 2);
 			cv::line(img, cv::Point(W, 0), cv::Point(W, H), cv::Scalar(255, 255, 255), 2);
-		}
-		for (size_t i = 0; i < annotation_dims.size(); i++) {
-			int W = static_cast<int>(annotation_dims[i].first* 1920);
-			int H = static_cast<int>(annotation_dims[i].second* 1920);
-			cv::circle(img, cv::Point(W, H), 5, ispring::CV::GetRGB(labels[i]),CV_FILLED);
 		}
 		cv::imwrite("Debug\\anchors.png",img);
 	}
@@ -118,6 +118,112 @@ inline std::string GetAnchors(int NUM,int WH,std::vector<std::string> images,boo
 		}
 	}
 	
+	std::ostringstream oss;
+	oss.precision(3);
+	for (int i = 0; i < centroids.size() - 1; i++) {
+		oss << centroids[i].first << "," << centroids[i].second << ", ";
+	}
+	oss << centroids.back().first << "," << centroids.back().second;
+	return oss.str();
+}
+
+inline std::string GetAdvancedAnchors(int NUM, int WH, std::vector<std::string> images, bool dbg_info, bool is_yolov3) {
+	std::vector<std::pair<float, float>> annotation_dimsW, annotation_dimsH;
+	int NUM_W = static_cast<int>(ceil(NUM / 2));
+	int NUM_H = NUM - NUM_W;
+	cv::Mat img = cv::Mat::zeros(1920, 1920, CV_8UC3) + cv::Scalar(0, 0, 0);
+	for (auto&file : images) {
+		file = file.substr(0, file.find_last_of('.')) + ".txt";
+		std::fstream fin(file, std::ios::in);
+		if (fin.is_open() == true) {
+			while (fin.eof() == false) {
+				std::string line;
+				std::getline(fin, line);
+				if (line.length() == 0)break;
+				std::istringstream iss;
+				iss.str(line);
+				float c, x, y, w, h;
+				iss >> c >> x >> y >> w >> h;
+				if (w >= h) {
+					annotation_dimsW.push_back(std::make_pair(w, h));
+				} else {
+					annotation_dimsH.push_back(std::make_pair(w, h));
+				}
+			}
+			fin.close();
+		}
+	}
+	std::sort(annotation_dimsW.begin(), annotation_dimsW.end(), [](std::pair<float, float> a, std::pair<float, float> b)->bool {
+		return a.first*a.second < b.first*b.second;
+	});
+	std::sort(annotation_dimsH.begin(), annotation_dimsH.end(), [](std::pair<float, float> a, std::pair<float, float> b)->bool {
+		return a.first*a.second < b.first*b.second;
+	});
+
+
+	std::vector<std::pair<float, float>> centroidsW, centroidsH;
+	for (int i = 0; i < NUM_W; i++) {
+		centroidsW.push_back(annotation_dimsW[annotation_dimsW.size() / (NUM_W + 2)*(i + 1)]);
+	}
+	for (int i = 0; i < NUM_H; i++) {
+		centroidsH.push_back(annotation_dimsH[annotation_dimsH.size() / (NUM_H + 2)*(i + 1)]);
+	}
+	std::vector<int> labelsW, labelsH;
+	centroidsW = KMeans(annotation_dimsW, centroidsW, labelsW);
+	centroidsH = KMeans(annotation_dimsH, centroidsH, labelsH);
+
+	if (dbg_info) {
+		for (size_t i = 0; i < annotation_dimsW.size(); i++) {
+			int W = static_cast<int>(annotation_dimsW[i].first * 1920);
+			int H = static_cast<int>(annotation_dimsW[i].second * 1920);
+			cv::circle(img, cv::Point(W, H), 5, ispring::CV::GetRGB(labelsW[i]), CV_FILLED);
+		}
+		for (size_t i = 0; i < annotation_dimsH.size(); i++) {
+			int W = static_cast<int>(annotation_dimsH[i].first * 1920);
+			int H = static_cast<int>(annotation_dimsH[i].second * 1920);
+			cv::circle(img, cv::Point(W, H), 5, ispring::CV::GetRGB(labelsH[i] + NUM_W), CV_FILLED);
+		}
+		for (size_t i = 0; i < centroidsW.size(); i++) {
+			int W = static_cast<int>(centroidsW[i].first * 1920);
+			int H = static_cast<int>(centroidsW[i].second * 1920);
+			cv::line(img, cv::Point(0, H), cv::Point(W, H), cv::Scalar(255, 255, 255), 2);
+			cv::line(img, cv::Point(W, 0), cv::Point(W, H), cv::Scalar(255, 255, 255), 2);
+		}
+		for (size_t i = 0; i < centroidsH.size(); i++) {
+			int W = static_cast<int>(centroidsH[i].first * 1920);
+			int H = static_cast<int>(centroidsH[i].second * 1920);
+			cv::line(img, cv::Point(0, H), cv::Point(W, H), cv::Scalar(255, 255, 255), 2);
+			cv::line(img, cv::Point(W, 0), cv::Point(W, H), cv::Scalar(255, 255, 255), 2);
+		}
+
+		cv::imwrite("Debug\\anchors(advanced).png", img);
+	}
+	if (is_yolov3 == false) {
+		for (auto&e : centroidsW) {
+			e.first *= WH / 32;
+			e.second *= WH / 32;
+		}
+		for (auto&e : centroidsH) {
+			e.first *= WH / 32;
+			e.second *= WH / 32;
+		}
+	} else {
+		for (auto&e : centroidsW) {
+			e.first *= WH;
+			e.second *= WH;
+		}
+		for (auto&e : centroidsH) {
+			e.first *= WH;
+			e.second *= WH;
+		}
+	}
+	std::vector<std::pair<float, float>> centroids;
+	for (auto&e : centroidsW) {
+		centroids.push_back(e);
+	}
+	for (auto&e : centroidsH) {
+		centroids.push_back(e);
+	}
 	std::ostringstream oss;
 	oss.precision(3);
 	for (int i = 0; i < centroids.size() - 1; i++) {

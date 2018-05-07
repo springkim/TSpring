@@ -81,9 +81,9 @@ public:
 	std::vector<MButtonCheck> m_chk_size;
 	std::vector<MStatic> m_stc_size;
 	int GetResolution() {
-		if (GetChkBtnByString(m_chk_size, m_stc_size, TEXT("Random"))->check) {
-			return 416;
-		}
+		//if (GetChkBtnByString(m_chk_size, m_stc_size, TEXT("Random"))->check) {
+		//	return 416;
+		//}
 		for (int i = 288; i <= 1088; i += 32) {
 			OStringStream oss;
 			oss << i << "x" << i;
@@ -100,7 +100,11 @@ public:
 		for (i = 0; i < m_chk_size.size(); i++) {
 			if (m_chk_size[i]->check == true) break;
 		}
-		return arr[i];
+		if (m_chk_export_origin->check == true) {
+			return -1;
+		} else {
+			return arr[i];
+		}
 	}
 	std::pair<char*, std::string> GetCFG() {
 		static char tmp[65536];
@@ -148,6 +152,10 @@ public:
 	MStatic m_stc_ignore_rbox;
 	MButtonCheck m_chk_debug_info;
 	MStatic m_stc_debug_info;
+	MButtonCheck m_chk_export_origin;
+	MStatic m_stc_export_origin;
+	MButtonCheck m_chk_advanced_anchors;
+	MStatic m_stc_advanced_anchors;
 
 	MSingleEdit m_edit_name;
 	MButton m_btn_export;
@@ -342,6 +350,13 @@ public:
 		return yolobox;
 	}
 	std::vector<RCNNBOX> GetRCNNBOX(cv::Mat& img, std::vector<TagInfo> tag_info,int size) {
+		int W, H;
+		if (size > 0) {
+			W = H = size;
+		} else {
+			W = img.cols;
+			H = img.rows;
+		}
 		std::vector<RCNNBOX> rcnnbox;
 		for (auto&e : tag_info) {
 			if (m_chk_ignore_rbox->check == true && e.m_rect.angle != 0) {	//각도 무시일경우 angle이 있으면 무시
@@ -358,14 +373,14 @@ public:
 			float ry2 = (rect.y + rect.height) / img.rows;
 			RCNNBOX box;
 			box.m_class = C;
-			box.x1 = rx1*size;
-			box.y1 = ry1*size;
-			box.x2 = rx2*size;
-			box.y2 = ry2*size;
-			mspring::SetRange(box.x1, 0, size - 1);
-			mspring::SetRange(box.y1, 0, size - 1);
-			mspring::SetRange(box.x2, 0, size - 1);
-			mspring::SetRange(box.y2, 0, size - 1);
+			box.x1 = static_cast<int>(rx1*W);
+			box.y1 = static_cast<int>(ry1*H);
+			box.x2 = static_cast<int>(rx2*W);
+			box.y2 = static_cast<int>(ry2*H);
+			mspring::SetRange(box.x1, 0, W - 1);
+			mspring::SetRange(box.y1, 0, H - 1);
+			mspring::SetRange(box.x2, 0, W - 1);
+			mspring::SetRange(box.y2, 0, H - 1);
 			rcnnbox.push_back(box);
 		}
 		return rcnnbox;

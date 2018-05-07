@@ -331,6 +331,9 @@ void ListView::OnRButtonUp(UINT nFlags, CPoint point) {
 			}break;
 			case 2: {
 				m_list_image->m_data.erase(m_list_image->m_data.begin() + idx);
+				if (GetApp().g_tag_idx >= GetApp().g_image_data->size()) {
+					GetApp().g_tag_idx = static_cast<int>(GetApp().g_image_data->size() - 1);
+				}
 			}break;
 			case 3: {
 				std::string img_path = mspring::String::ToString(m_list_image->m_data[idx].first);
@@ -340,6 +343,9 @@ void ListView::OnRButtonUp(UINT nFlags, CPoint point) {
 				ispring::File::FileErase(tsp_path);
 				std::string tsps_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsps";
 				ispring::File::FileErase(tsps_path);
+				if (GetApp().g_tag_idx >= GetApp().g_image_data->size()) {
+					GetApp().g_tag_idx = static_cast<int>(GetApp().g_image_data->size() - 1);
+				}
 			}break;
 		}
 	}

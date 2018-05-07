@@ -58,7 +58,7 @@ ExportView::ExportView(CWnd* wnd) : VirtualView(wnd){
 	m_str_models.push_back(TEXT("Resnet50"));
 	m_str_models.push_back(TEXT("VGG16"));
 	m_str_models.push_back(TEXT("VGG19"));
-	for (size_t i = 0; i < m_str_models.size(); i++) {
+	for (int i = 0; i < static_cast<int>(m_str_models.size()); i++) {
 		MButtonCheck chk= CreateControl<MButtonCheck>(wnd, MRect(MRectPosition::LT, base, 70+i*50, 25, 25));
 		chk->m_color_text = GetTheme().ButtonColorText();
 		chk->m_color_fr = GetTheme().ButtonColorFR();
@@ -84,7 +84,7 @@ ExportView::ExportView(CWnd* wnd) : VirtualView(wnd){
 	m_str_option.push_back(TEXT("13 anchors"));
 	m_str_option.push_back(TEXT("15 anchors"));
 	m_str_option.push_back(TEXT("17 anchors"));
-	for (size_t i = 0; i < m_str_option.size(); i++) {
+	for (int i = 0; i < static_cast<int>(m_str_option.size()); i++) {
 		MButtonCheck chk = CreateControl<MButtonCheck>(wnd, MRect(MRectPosition::LT, base, 70 + i * 50, 25, 25));
 		chk->m_color_text = GetTheme().ButtonColorText();
 		chk->m_color_fr = GetTheme().ButtonColorFR();
@@ -110,7 +110,7 @@ ExportView::ExportView(CWnd* wnd) : VirtualView(wnd){
 	m_str_size.push_back(TEXT("850x850"));
 	m_str_size.push_back(TEXT("1088x1088"));
 	m_str_size.push_back(TEXT("Random"));
-	for (size_t i = 0; i < m_str_size.size(); i++) {
+	for (int i = 0; i < static_cast<int>(m_str_size.size()); i++) {
 		MButtonCheck chk = CreateControl<MButtonCheck>(wnd, MRect(MRectPosition::LT, base, 70 + i * 50, 25, 25));
 		chk->m_color_text = GetTheme().ButtonColorText();
 		chk->m_color_fr = GetTheme().ButtonColorFR();
@@ -137,7 +137,7 @@ ExportView::ExportView(CWnd* wnd) : VirtualView(wnd){
 	m_str_noise.push_back(TEXT("Blur"));
 	m_str_noise.push_back(TEXT("Gamma Correction(0.5)"));
 	m_str_noise.push_back(TEXT("Gamma Correction(1.5)"));
-	for (size_t i = 0; i < m_str_noise.size(); i++) {
+	for (int i = 0; i < static_cast<int>(m_str_noise.size()); i++) {
 		MButtonCheck chk = CreateControl<MButtonCheck>(wnd, MRect(MRectPosition::LT, base, 70 + i * 50, 25, 25));
 		chk->m_color_text = GetTheme().ButtonColorText();
 		chk->m_color_fr = GetTheme().ButtonColorFR();
@@ -177,11 +177,25 @@ ExportView::ExportView(CWnd* wnd) : VirtualView(wnd){
 	m_stc_debug_info->m_color_text = GetTheme().ButtonColorText();
 	m_stc_debug_info->m_text = TEXT("Generate debug info");
 
-	m_stc_name= CreateControl< MStatic>(wnd, MRect(MRectPosition::RB, 310, 235, 80, 30));
+	m_chk_export_origin = CreateControl< MButtonCheck>(wnd, MRect(MRectPosition::RB, 380 - 25, 250, 25, 25));
+	m_chk_export_origin->m_color_text = GetTheme().ButtonColorText();
+	m_chk_export_origin->m_color_fr = GetTheme().ButtonColorFR();
+	m_stc_export_origin = CreateControl< MStatic>(wnd, MRect(MRectPosition::RB, 380 - 25 - 200 - 10, 250, 200, 25));
+	m_stc_export_origin->m_color_text = GetTheme().ButtonColorText();
+	m_stc_export_origin->m_text = TEXT("Export as original resolution");
+
+	m_chk_advanced_anchors = CreateControl< MButtonCheck>(wnd, MRect(MRectPosition::RB, 380 - 25, 220, 25, 25));
+	m_chk_advanced_anchors->m_color_text = GetTheme().ButtonColorText();
+	m_chk_advanced_anchors->m_color_fr = GetTheme().ButtonColorFR();
+	m_stc_advanced_anchors = CreateControl< MStatic>(wnd, MRect(MRectPosition::RB, 380 - 25 - 200 - 10, 220, 200, 25));
+	m_stc_advanced_anchors->m_color_text = GetTheme().ButtonColorText();
+	m_stc_advanced_anchors->m_text = TEXT("Use advanced anchor");
+
+	m_stc_name= CreateControl< MStatic>(wnd, MRect(MRectPosition::RB, 310, 175, 80, 30));
 	m_stc_name->m_color_text = GetTheme().ButtonColorText();
 	m_stc_name->m_text = TEXT("Name : ");
 
-	m_edit_name = CreateControl<MSingleEdit>(wnd, MRect(MRectPosition::RB, 10, 235, 300, 30));
+	m_edit_name = CreateControl<MSingleEdit>(wnd, MRect(MRectPosition::RB, 10, 175, 300, 30));
 	m_edit_name->m_color_text = GetTheme().ButtonColorText();
 	m_edit_name->m_color_fr = GetTheme().ButtonColorFR();
 	
@@ -213,6 +227,10 @@ ExportView::ExportView(CWnd* wnd) : VirtualView(wnd){
 	this->AddControl(m_edit_name);
 	this->AddControl(m_btn_export);
 	this->AddControl(m_stc_name);
+	this->AddControl(m_chk_export_origin);
+	this->AddControl(m_stc_export_origin);
+	this->AddControl(m_chk_advanced_anchors);
+	this->AddControl(m_stc_advanced_anchors);
 
 	this->AddControl(m_chk_rotate);
 	this->AddControl(m_stc_rotate);
@@ -324,6 +342,7 @@ void ExportView::OnLButtonDown(UINT nFlags, CPoint point) {
 		m_chk_fasterrcnn->check = false;
 		m_chk_dlibcnn->check = false;
 		m_chk_yolo->check = true;
+		m_chk_advanced_anchors->disable = false;
 		for (auto&e : m_chk_models) e->check = false;
 		for (auto&e : m_chk_option) e->check = false;
 		for (auto&e : m_chk_size) e->check = false;
@@ -335,6 +354,7 @@ void ExportView::OnLButtonDown(UINT nFlags, CPoint point) {
 		m_chk_fasterrcnn->check = true;
 		m_chk_yolo->check = false;
 		m_chk_dlibcnn->check = false;
+		m_chk_advanced_anchors->disable = true;
 		for (auto&e : m_chk_models) e->check = false;
 		for (auto&e : m_chk_option) e->check = false;
 		for (auto&e : m_chk_size) e->check = false;
@@ -361,10 +381,12 @@ void ExportView::OnLButtonDown(UINT nFlags, CPoint point) {
 			e->check = true;
 		}
 	}
-	for (auto&e : m_chk_size) {
-		if (e->isChanged()) {
-			for (auto&e : m_chk_size) e->check = false;
-			e->check = true;
+	for (size_t i = 0; i<m_chk_size.size() - 1; i++) {
+		if (m_chk_size[i]->isChanged()) {
+			for(size_t j=0;j<m_chk_size.size()-1;j++){ 
+				m_chk_size[j]->check = false;
+			}
+			m_chk_size[i]->check = true;
 		}
 	}
 	if (m_btn_export->isClicked()) {
@@ -525,7 +547,7 @@ void ExportView::GenExportImage(std::string filename,std::fstream& fout_train_tx
 			}
 			if (rtag.empty() == true)continue;
 			std::ostringstream oss;
-			oss << "(angle_" << ispring::String::PadNum(j,3) << ")";
+			oss << "(angle_" << ispring::String::PadNum(static_cast<unsigned int>(j),3) << ")";
 			cv::Mat rimg;
 			cv::Point out;
 			rimg = ispring::CV::ImageRotateOuter(img, static_cast<double>(j), &out);
@@ -561,7 +583,9 @@ void ExportView::GenExportImage(std::string filename,std::fstream& fout_train_tx
 				std::string file_noext = GetOriginalName(filename, "train\\", oss.str() + ".jpg");
 				std::string file_img = file_noext + oss.str() + ".jpg";
 				std::string file_txt = file_noext + oss.str() + ".txt";
-				cv::resize(rimg, rimg, cv::Size(SIZE, SIZE), cv::INTER_LANCZOS4);
+				if (SIZE > 0) {
+					cv::resize(rimg, rimg, cv::Size(SIZE, SIZE), cv::INTER_LANCZOS4);
+				}
 				cv::imwrite("train\\" + file_img, rimg);
 				std::fstream fout;
 				fout.open("train\\" + file_txt, std::ios::out);
@@ -583,7 +607,9 @@ void ExportView::GenExportImage(std::string filename,std::fstream& fout_train_tx
 				if (rcnnbox.size() == 0)return;
 				std::string file_noext = GetOriginalName(filename, "train\\", ".jpg");
 				std::string file_img = file_noext + ".jpg";
-				cv::resize(rimg, rimg, cv::Size(SIZE, SIZE), cv::INTER_LANCZOS4);
+				if (SIZE > 0) {
+					cv::resize(rimg, rimg, cv::Size(SIZE, SIZE), cv::INTER_LANCZOS4);
+				}
 				cv::imwrite("train\\" + file_img, rimg);
 				fout_train_txt << this->rcnn_cnt << "\ttrain/" << file_img << "\t" << 0 << std::endl;
 				fout_roi_txt << this->rcnn_cnt << " |roiAndLabel";
@@ -623,7 +649,9 @@ void ExportView::GenExportImage(std::string filename,std::fstream& fout_train_tx
 			std::string file_noext = GetOriginalName(filename, "train\\", ".jpg");
 			std::string file_img = file_noext + ".jpg";
 			std::string file_txt = file_noext + ".txt";
-			cv::resize(img, img, cv::Size(SIZE, SIZE), cv::INTER_LANCZOS4);
+			if (SIZE > 0) {
+				cv::resize(img, img, cv::Size(SIZE, SIZE), cv::INTER_LANCZOS4);
+			}
 			cv::imwrite("train\\" + file_img, img);
 			std::fstream fout;
 			fout.open("train\\" + file_txt, std::ios::out);
@@ -645,7 +673,9 @@ void ExportView::GenExportImage(std::string filename,std::fstream& fout_train_tx
 			if (rcnnbox.size() == 0)return;
 			std::string file_noext = GetOriginalName(filename, "train\\", ".jpg");
 			std::string file_img = file_noext + ".jpg";
-			cv::resize(img, img, cv::Size(SIZE, SIZE), cv::INTER_LANCZOS4);
+			if (SIZE > 0) {
+				cv::resize(img, img, cv::Size(SIZE, SIZE), cv::INTER_LANCZOS4);
+			}
 			cv::imwrite("train\\" + file_img, img);
 			fout_train_txt << this->rcnn_cnt << "\ttrain/" << file_img << "\t" << 0 << std::endl;
 			fout_roi_txt << this->rcnn_cnt << " |roiAndLabel";
@@ -677,15 +707,18 @@ UINT Export_YOLO_T(void* param) {
 		ispring::File::DirectoryMake("Debug\\crop");
 	}
 	GetApp().g_export_str = TEXT("Download modules");
-	GetApp().g_progress_total = 2;
+	GetApp().g_progress_total = 4;
 	GetApp().g_progress_current = 0;
-	_this->DownloadFile("https://www.dropbox.com/s/mejmd1fd3fqhc2z/YOLOv3SE_Train.exe?dl=1", "bin/YOLOv3SE_Train.exe.exe");
+	_this->DownloadFile("https://www.dropbox.com/s/mejmd1fd3fqhc2z/YOLOv3SE_Train.exe?dl=1", "bin/YOLOv3SE_Train.exe");
 	GetApp().g_progress_current = 1;
 	_this->DownloadFile("https://www.dropbox.com/s/kc9sd1irv95v53w/cudnn64_5.dll?dl=1", "bin/cudnn64_5.dll");
 	GetApp().g_progress_current = 2;
-
+	_this->DownloadFile("https://www.dropbox.com/s/0lu4bln39okffie/cublas64_80.dll?dl=1", "bin/cublas64_80.dll");
+	GetApp().g_progress_current = 3;
+	_this->DownloadFile("https://www.dropbox.com/s/of8fviplod6vf7u/curand64_80.dll?dl=1", "bin/curand64_80.dll");
+	GetApp().g_progress_current = 4;
 	GetApp().g_export_str = TEXT("Generate images");
-	GetApp().g_progress_total = images.size();
+	GetApp().g_progress_total = static_cast<int>(images.size());
 	GetApp().g_progress_current = 0;
 	ExportView::ImageStatistics stat;
 	stat.nOfTotal = 0;
@@ -701,7 +734,7 @@ UINT Export_YOLO_T(void* param) {
 		auto& file = images[i].first;
 		_this->GenExportImage(_this->ConvertWCtoC(file.data()), fout_train_txt,stat);
 
-		GetApp().g_progress_current = i + 1;
+		GetApp().g_progress_current = static_cast<int>(i + 1);
 	}
 	///태깅정보 생성
 	if (_this->m_chk_debug_info->check == true) {
@@ -714,8 +747,11 @@ UINT Export_YOLO_T(void* param) {
 	std::string anchors;
 
 	std::vector<std::string> images_str = ispring::File::FileList("train/", "*.jpg");
-	anchors = GetAnchors(nOfAnchors, resolution, images_str,_this->m_chk_debug_info->check, is_yolo3);
-	
+	if (_this->m_chk_advanced_anchors->check == true) {
+		anchors = GetAdvancedAnchors(nOfAnchors, resolution, images_str, _this->m_chk_debug_info->check, is_yolo3);
+	} else {
+		anchors = GetAnchors(nOfAnchors, resolution, images_str, _this->m_chk_debug_info->check, is_yolo3);
+	}
 	///CFG 생성
 	int BATCH = 64;
 	int SUBDIVISION = 64;
@@ -901,7 +937,7 @@ UINT Export_FasterRCNN_T(void* param) {
 		ispring::Web::Download(urls[i], dsts[i]);
 		_this->DownloadFile(urls[i], dsts[i]);
 		//powershell "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile('https://github.com%url%','AtomSetup-x64.exe')"
-		GetApp().g_progress_current = i + 1;
+		GetApp().g_progress_current = static_cast<int>(i + 1);
 	}
 	int epoch = 1000;
 	///BAT , Pretrained
@@ -932,7 +968,7 @@ UINT Export_FasterRCNN_T(void* param) {
 	}
 
 	GetApp().g_export_str = TEXT("Generate images");
-	GetApp().g_progress_total = images.size();
+	GetApp().g_progress_total = static_cast<int>(images.size());
 	GetApp().g_progress_current = 0;
 	ExportView::ImageStatistics stat;
 	stat.nOfTotal = 0;
@@ -959,7 +995,7 @@ UINT Export_FasterRCNN_T(void* param) {
 	for (size_t i = 0; i < images.size(); i++) {
 		auto& file = images[i].first;
 		_this->GenExportImage(_this->ConvertWCtoC(file.data()), fout_train_txt, stat,fout_roi_txt);
-		GetApp().g_progress_current = i + 1;
+		GetApp().g_progress_current = static_cast<int>(i + 1);
 	}
 	///태깅정보 생성
 	if (_this->m_chk_debug_info->check == true) {
