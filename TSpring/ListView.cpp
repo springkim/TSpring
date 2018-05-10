@@ -14,6 +14,7 @@ ListView::ListView(CWnd* wnd) : VirtualView(wnd) {
 	m_list_image->m_color_bk = GetTheme().ListViewColorBK();
 	m_list_image->m_color_text = GetTheme().ListViewColorText();
 	m_list_image->m_color_fr = GetTheme().ListColorScroll();
+	m_list_image->allow_multi_select = true;
 
 	m_list_class = CreateControl<MListBox>(wnd, MRect(MRectPosition::R, 380, 10, 10, 190));
 	m_list_class->m_color_bk = GetTheme().ListViewColorBK();
@@ -316,9 +317,18 @@ void ListView::OnRButtonUp(UINT nFlags, CPoint point) {
 	GetCursorPos(&point);
 	int idx = m_list_image->GetElementByPoint(this->GetMousePoint());
 	if (idx != -1) {
+		int idx_beg, idx_end;
+		if (m_list_image->m_select_beg <= idx && idx <= m_list_image->m_select_end) {
+			idx_beg = m_list_image->m_select_beg;
+			idx_end = m_list_image->m_select_end;
+		} else {
+			idx_beg = idx_end = idx;
+		}
 		MSpringMenu popup(this->m_parent);
 		popup.CreatePopupMenu();
-		popup.AppendMenu(MF_STRING, 1, TEXT("Go to tagging"));
+		if (idx_beg == idx_end) {
+			popup.AppendMenu(MF_STRING, 1, TEXT("Go to tagging"));
+		}
 		popup.AppendMenu(MF_STRING, 2, TEXT("Remove from list"));
 		popup.AppendMenu(MF_STRING, 3, TEXT("Remove from disk"));
 		popup.MakeItemsOwnDraw();
@@ -326,26 +336,34 @@ void ListView::OnRButtonUp(UINT nFlags, CPoint point) {
 		popup.DestroyMenu();
 		switch (menu_id) {
 			case 1: {
-				GetApp().g_command_go2tagging = idx;
+				GetApp().g_command_go2tagging = idx_beg;
 				AfxGetMainWnd()->SendMessage(WM_LBUTTONDOWN, NULL, NULL);
 			}break;
 			case 2: {
-				m_list_image->m_data.erase(m_list_image->m_data.begin() + idx);
+				m_list_image->m_data.erase(m_list_image->m_data.begin() + idx_beg
+										   , m_list_image->m_data.begin() + idx_end+1);
 				if (GetApp().g_tag_idx >= GetApp().g_image_data->size()) {
 					GetApp().g_tag_idx = static_cast<int>(GetApp().g_image_data->size() - 1);
 				}
+				m_list_image->m_select_beg = m_list_image->m_select_end = -1;
 			}break;
 			case 3: {
-				std::string img_path = mspring::String::ToString(m_list_image->m_data[idx].first);
-				ispring::File::FileErase(img_path);
-				m_list_image->m_data.erase(m_list_image->m_data.begin() + idx);
-				std::string tsp_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsp";
-				ispring::File::FileErase(tsp_path);
-				std::string tsps_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsps";
-				ispring::File::FileErase(tsps_path);
+				
+				for (int ridx = idx_beg; ridx <= idx_end; ridx++) {
+					std::string img_path = mspring::String::ToString(m_list_image->m_data[ridx].first);
+					ispring::File::FileErase(img_path);
+					std::string tsp_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsp";
+					ispring::File::FileErase(tsp_path);
+					std::string tsps_path = img_path.substr(0, img_path.find_last_of('.')) + ".tsps";
+					ispring::File::FileErase(tsps_path);
+				}
+				m_list_image->m_data.erase(m_list_image->m_data.begin() + idx_beg
+										   , m_list_image->m_data.begin() + idx_end + 1);
+
 				if (GetApp().g_tag_idx >= GetApp().g_image_data->size()) {
 					GetApp().g_tag_idx = static_cast<int>(GetApp().g_image_data->size() - 1);
 				}
+				m_list_image->m_select_beg = m_list_image->m_select_end = -1;
 			}break;
 		}
 	}

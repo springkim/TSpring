@@ -281,7 +281,7 @@ void ExportView::OnPaint(CDC* pDC) {
 			e.second = true;
 		}
 	}
-	m_list_class->m_select = -1;
+	m_list_class->m_select_beg= m_list_class->m_select_end = -1;
 	
 	for (auto&e : m_chk_models) {e->disable = false;}
 	if (m_chk_yolo->check == true) {

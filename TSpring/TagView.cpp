@@ -244,8 +244,8 @@ void TagView::OnPaint(CDC* pDC) {
 		oss << m_tag_data.size() << TEXT(" box") << TEXT("\0es") + (m_tag_data.size() > 1) << TEXT(" tagged");
 		m_stc_tag_info->m_text = oss.str();
 	}
-	if (m_list_class->m_select == -1 && GetApp().g_class_data->size() > 0) {
-		m_list_class->m_select = 0;
+	if (m_list_class->m_select_beg == -1 && GetApp().g_class_data->size() > 0) {
+		m_list_class->m_select_beg = m_list_class->m_select_end= 0;
 	}
 	switch (m_pen_style) {
 		case 0:m_btn_pen_style->m_text = TEXT("Light pen"); break;
@@ -530,7 +530,7 @@ void TagView::OnLButtonDown(UINT nFlags, CPoint point) {
 	m_l_down = this->GetMousePoint();
 	*GetApp().g_is_tracking = m_chk_tracking->check;
 	
-	if (m_list_class->m_select == -1 && m_img_rect.PtInRect(point)) {
+	if (m_list_class->m_select_beg == -1 && m_img_rect.PtInRect(point)) {
 		TSpringMsgBox msgbox(TEXT("Please, make class list before tagging"));
 		msgbox.DoModal();
 		AfxGetMainWnd()->SendMessage(MSPRING_DISABLE_HTTEST, 0);
@@ -546,14 +546,14 @@ void TagView::OnLButtonDown(UINT nFlags, CPoint point) {
 		return;
 	}
 	if (m_chk_edit->check == false) {	//Tag start
-		if (m_list_class->m_select != -1 && m_img_rect.PtInRect(point)) {
+		if (m_list_class->m_select_beg != -1 && m_img_rect.PtInRect(point)) {
 			m_drag_point = point;
 			m_angle = 0;
 			cv::RotatedRect rrect = this->GetRotatedRect(m_drag_point, m_drag_point, m_angle);
 			if ((GetAsyncKeyState('q') & 0x8000) || (GetAsyncKeyState('Q') & 0x8000)) {
 				m_tag_data.push_back(TagInfo(-100, rrect,-1));
 			} else {
-				m_tag_data.push_back(TagInfo(m_list_class->m_select, rrect,-1));
+				m_tag_data.push_back(TagInfo(m_list_class->m_select_beg, rrect,-1));
 			}
 			this->m_parent->SetTimer(MOUSE_LEAVE_TIMER_ID, 10, nullptr);
 		}
@@ -660,7 +660,7 @@ void TagView::OnRButtonUp(UINT nFlags, CPoint point) {
 		this->ClearEditState();
 		int idx = this->GetFocusedTag();
 		if (idx != -1) {
-			m_tag_data[idx].m_class = m_list_class->m_select;
+			m_tag_data[idx].m_class = m_list_class->m_select_beg;
 		}
 	}
 	WriteTagFile();
@@ -976,11 +976,13 @@ void TagView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) {
 		}
 	} else if (IsKeyDown('W')) {
 		if (m_list_class->m_data.size() > 0) {
-			m_list_class->m_select = static_cast<int>((m_list_class->m_select - 1 + m_list_class->m_data.size()) % m_list_class->m_data.size());
+			m_list_class->m_select_beg = static_cast<int>((m_list_class->m_select_beg - 1 + m_list_class->m_data.size()) % m_list_class->m_data.size());
+			m_list_class->m_select_end = m_list_class->m_select_beg;
 		}
 	} else if (IsKeyDown('S')) {
 		if (m_list_class->m_data.size() > 0) {
-			m_list_class->m_select = (m_list_class->m_select + 1) % m_list_class->m_data.size();
+			m_list_class->m_select_beg = (m_list_class->m_select_beg + 1) % m_list_class->m_data.size();
+			m_list_class->m_select_end = m_list_class->m_select_beg;
 		}
 	} else if (IsKeyDown('E')) {
 		m_chk_edit->check = !m_chk_edit->check;
