@@ -632,7 +632,7 @@ void ExportView::GenExportImage(std::string filename,std::fstream& fout_train_tx
 					if (m_chk_boundingbox->check == true || taginfo[j].m_rect.angle == 0) {
 						cv::Rect rect = taginfo[j].m_rect.boundingRect();
 						rect = GetSafeRect(rect, img.size());
-						SaveCropImage(filename, img(rect), real_tag[j]);
+						SaveCropImage(filename, img(rect), taginfo[j].m_class);
 					}
 				}
 				appear[real_tag[j]] = 1;

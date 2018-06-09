@@ -319,10 +319,10 @@ public:
 		}
 		return tmp;
 	}
-	void SaveCropImage(std::string filename,cv::Mat img, int real_class) {
+	void SaveCropImage(std::string filename,cv::Mat img, int old_class) {
 		std::string dir=("Debug\\crop\\"
-									 + ispring::String::PadNum(GetExportClass(real_class), 4) + "("
-									 + std::string(m_list_class->m_data[real_class].first.begin(), m_list_class->m_data[real_class].first.end())
+									 + ispring::String::PadNum(GetExportClass(old_class), 4) + "("
+									 + std::string(m_list_class->m_data[old_class].first.begin(), m_list_class->m_data[old_class].first.end())
 									 + ")\\");
 		ispring::File::DirectoryMake(dir);
 		std::string cropname = GetOriginalName(filename, dir, ".jpg");
