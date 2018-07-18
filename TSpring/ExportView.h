@@ -335,7 +335,7 @@ public:
 				continue;
 			}
 			int C = GetExportClass(e.m_class);
-			if (C == -100) {
+			if (C == -100 || C == -1) {
 				continue;
 			}
 			cv::Rect2f rect = e.m_rect.boundingRect2f();

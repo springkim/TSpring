@@ -1,7 +1,7 @@
 #pragma once
 #include<iostream>
 #include<opencv2/opencv.hpp>
-#include"Theme.h"
+//#include"Theme.h"
 inline std::vector<float> IOU(std::pair<float, float> val, std::vector<std::pair<float, float>> centroids) {
 	std::vector<float> similarities;
 	for (size_t i = 0; i < centroids.size(); i++) {
@@ -63,6 +63,7 @@ inline std::vector<std::pair<float, float>> KMeans(std::vector<std::pair<float, 
 }
 inline std::string GetAnchors(int NUM,int WH,std::vector<std::string> images,bool dbg_info,bool is_yolov3) {
 	std::vector<std::pair<float, float>> annotation_dims;
+	std::set<std::pair<float, float>> set_annotation_dims;
 	cv::Mat img = cv::Mat::zeros(1920, 1920, CV_8UC3) + cv::Scalar(0,0,0);
 	for (auto&file : images) {
 		file = file.substr(0, file.find_last_of('.')) + ".txt";
@@ -76,14 +77,18 @@ inline std::string GetAnchors(int NUM,int WH,std::vector<std::string> images,boo
 				iss.str(line);
 				float c, x, y, w, h;
 				iss >> c >> x >> y >> w >> h;
-				annotation_dims.push_back(std::make_pair(w, h));
+				set_annotation_dims.insert(std::make_pair(w, h));
 			}
 			fin.close();
 		}
 	}
+	for (auto&e : set_annotation_dims) {
+		annotation_dims.push_back(e);
+	}
 	std::sort(annotation_dims.begin(), annotation_dims.end(), [](std::pair<float, float> a, std::pair<float, float> b)->bool {
 		return a.first*a.second < b.first*b.second;
 	});
+	
 	std::vector<std::pair<float, float>> centroids;
 
 	for (int i = 0; i < NUM; i++) {
@@ -129,6 +134,7 @@ inline std::string GetAnchors(int NUM,int WH,std::vector<std::string> images,boo
 
 inline std::string GetAdvancedAnchors(int NUM, int WH, std::vector<std::string> images, bool dbg_info, bool is_yolov3) {
 	std::vector<std::pair<float, float>> annotation_dimsW, annotation_dimsH;
+	std::set<std::pair<float, float>> set_annotation_dimsW, set_annotation_dimsH;
 	int NUM_W = static_cast<int>(ceil(NUM / 2));
 	int NUM_H = NUM - NUM_W;
 	cv::Mat img = cv::Mat::zeros(1920, 1920, CV_8UC3) + cv::Scalar(0, 0, 0);
@@ -145,13 +151,19 @@ inline std::string GetAdvancedAnchors(int NUM, int WH, std::vector<std::string> 
 				float c, x, y, w, h;
 				iss >> c >> x >> y >> w >> h;
 				if (w >= h) {
-					annotation_dimsW.push_back(std::make_pair(w, h));
+					set_annotation_dimsW.insert(std::make_pair(w, h));
 				} else {
-					annotation_dimsH.push_back(std::make_pair(w, h));
+					set_annotation_dimsH.insert(std::make_pair(w, h));
 				}
 			}
 			fin.close();
 		}
+	}
+	for (auto&e : set_annotation_dimsW) {
+		annotation_dimsW.push_back(e);
+	}
+	for (auto&e : set_annotation_dimsH) {
+		annotation_dimsH.push_back(e);
 	}
 	std::sort(annotation_dimsW.begin(), annotation_dimsW.end(), [](std::pair<float, float> a, std::pair<float, float> b)->bool {
 		return a.first*a.second < b.first*b.second;
@@ -159,7 +171,6 @@ inline std::string GetAdvancedAnchors(int NUM, int WH, std::vector<std::string> 
 	std::sort(annotation_dimsH.begin(), annotation_dimsH.end(), [](std::pair<float, float> a, std::pair<float, float> b)->bool {
 		return a.first*a.second < b.first*b.second;
 	});
-
 
 	std::vector<std::pair<float, float>> centroidsW, centroidsH;
 	for (int i = 0; i < NUM_W; i++) {
