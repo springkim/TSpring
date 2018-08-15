@@ -707,15 +707,17 @@ UINT Export_YOLO_T(void* param) {
 		ispring::File::DirectoryMake("Debug\\crop");
 	}
 	GetApp().g_export_str = TEXT("Download modules");
-	GetApp().g_progress_total = 4;
+	GetApp().g_progress_total = 5;
 	GetApp().g_progress_current = 0;
-	_this->DownloadFile("https://www.dropbox.com/s/mejmd1fd3fqhc2z/YOLOv3SE_Train.exe?dl=1", "bin/YOLOv3SE_Train.exe");
+	_this->DownloadFile("https://github.com/springkim/TSpring/releases/download/yolov3/YOLOv3SE_Train.exe", "bin/YOLOv3SE_Train.exe");
 	GetApp().g_progress_current = 1;
-	_this->DownloadFile("https://www.dropbox.com/s/kc9sd1irv95v53w/cudnn64_5.dll?dl=1", "bin/cudnn64_5.dll");
+	_this->DownloadFile("https://github.com/springkim/TSpring/releases/download/yolov3/cudnn64_7.dll", "bin/cudnn64_7.dll");
 	GetApp().g_progress_current = 2;
-	_this->DownloadFile("https://www.dropbox.com/s/0lu4bln39okffie/cublas64_80.dll?dl=1", "bin/cublas64_80.dll");
+	_this->DownloadFile("https://github.com/springkim/TSpring/releases/download/yolov3/cublas64_90.dll", "bin/cublas64_80.dll");
 	GetApp().g_progress_current = 3;
-	_this->DownloadFile("https://www.dropbox.com/s/of8fviplod6vf7u/curand64_80.dll?dl=1", "bin/curand64_80.dll");
+	_this->DownloadFile("https://github.com/springkim/TSpring/releases/download/yolov3/curand64_90.dll", "bin/curand64_80.dll");
+	GetApp().g_progress_current = 4;
+	_this->DownloadFile("https://github.com/springkim/TSpring/releases/download/yolov3/vcruntime140.dll", "bin/vcruntime140.dll");
 	GetApp().g_progress_current = 4;
 	GetApp().g_export_str = TEXT("Generate images");
 	GetApp().g_progress_total = static_cast<int>(images.size());
@@ -910,29 +912,29 @@ UINT Export_FasterRCNN_T(void* param) {
 	///bin 받기
 	///pretrained 받기
 	std::vector<std::string> urls, dsts;
-	urls.push_back("https://www.dropbox.com/s/0rpr7j150vyqd4y/Cntk.Core-2.2.dll?dl=1"); dsts.push_back("bin/Cntk.Core-2.2.dll");
-	urls.push_back("https://www.dropbox.com/s/ax7rt9x0tisv1ef/Cntk.Math-2.2.dll?dl=1"); dsts.push_back("bin/Cntk.Math-2.2.dll");
-	urls.push_back("https://www.dropbox.com/s/oedrywx39qmyxcv/Cntk.PerformanceProfiler-2.2.dll?dl=1"); dsts.push_back("bin/Cntk.PerformanceProfiler-2.2.dll");
-	urls.push_back("https://www.dropbox.com/s/bz2zxgz9x5rxvt1/concrt140.dll?dl=1"); dsts.push_back("bin/concrt140.dll");
-	urls.push_back("https://www.dropbox.com/s/mqib7ytl6mxlwij/cublas64_80.dll?dl=1"); dsts.push_back("bin/cublas64_80.dll");
-	urls.push_back("https://www.dropbox.com/s/z14s7b9etmo9sd4/cudart64_80.dll?dl=1"); dsts.push_back("bin/cudart64_80.dll");
-	urls.push_back("https://www.dropbox.com/s/fqk0p5ghmlij6v5/cudnn64_6.dll?dl=1"); dsts.push_back("bin/cudnn64_6.dll");
-	urls.push_back("https://www.dropbox.com/s/8958cceosr5tyr0/curand64_80.dll?dl=1"); dsts.push_back("bin/curand64_80.dll");
-	urls.push_back("https://www.dropbox.com/s/xs2px0z5xbpprg7/cusparse64_80.dll?dl=1"); dsts.push_back("bin/cusparse64_80.dll");
-	urls.push_back("https://www.dropbox.com/s/oys58g4yozmlwwc/FasterRCNN_Train_SE.exe?dl=1"); dsts.push_back("bin/FasterRCNN_Train_SE.exe");
-	urls.push_back("https://www.dropbox.com/s/uzdmeqh3yua54ez/libiomp5md.dll?dl=1"); dsts.push_back("bin/libiomp5md.dll");
-	urls.push_back("https://www.dropbox.com/s/snsf5aysewfrkls/mkl_cntk_p.dll?dl=1"); dsts.push_back("bin/mkl_cntk_p.dll");
-	urls.push_back("https://www.dropbox.com/s/xlh8vtr9inbktvc/msvcp140.dll?dl=1"); dsts.push_back("bin/msvcp140.dll");
-	urls.push_back("https://www.dropbox.com/s/wx7k8qw9mjmosym/nvml.dll?dl=1"); dsts.push_back("bin/nvml.dll");
-	urls.push_back("https://www.dropbox.com/s/nmr47lpqrmqy2yz/python35.dll?dl=1"); dsts.push_back("bin/python35.dll");
-	urls.push_back("https://www.dropbox.com/s/7unsh9kl9taifma/ucrtbase.dll?dl=1"); dsts.push_back("bin/ucrtbase.dll");
-	urls.push_back("https://www.dropbox.com/s/jja4niuxa7sv1g2/vccorlib140.dll?dl=1"); dsts.push_back("bin/vccorlib140.dll");
-	urls.push_back("https://www.dropbox.com/s/4skunqose0ablnk/vcomp140.dll?dl=1"); dsts.push_back("bin/vcomp140.dll");
-	urls.push_back("https://www.dropbox.com/s/j2fosolulp7m7m3/vcruntime140.dll?dl=1"); dsts.push_back("bin/vcruntime140.dll");
-	urls.push_back("https://www.dropbox.com/s/ssb1b1uhj7fjj1k/xlwings32.dll?dl=1"); dsts.push_back("bin/xlwings32.dll");
-	urls.push_back("https://www.dropbox.com/s/w82s2vw09wg6sdo/xlwings64.dll?dl=1"); dsts.push_back("bin/xlwings64.dll");
-	urls.push_back("https://www.dropbox.com/s/lliy3d0sx2l5re7/zip.dll?dl=1"); dsts.push_back("bin/zip.dll");
-	urls.push_back("https://www.dropbox.com/s/64cztnodovhsi6x/zlib.dll?dl=1"); dsts.push_back("bin/zlib.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/Cntk.Core-2.2.dll"); dsts.push_back("bin/Cntk.Core-2.2.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/Cntk.Math-2.2.dll"); dsts.push_back("bin/Cntk.Math-2.2.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/Cntk.PerformanceProfiler-2.2.dll"); dsts.push_back("bin/Cntk.PerformanceProfiler-2.2.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/concrt140.dll"); dsts.push_back("bin/concrt140.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/cublas64_80.dll"); dsts.push_back("bin/cublas64_80.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/cudart64_80.dll"); dsts.push_back("bin/cudart64_80.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/cudnn64_6.dll"); dsts.push_back("bin/cudnn64_6.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/curand64_80.dll"); dsts.push_back("bin/curand64_80.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/cusparse64_80.dll"); dsts.push_back("bin/cusparse64_80.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/FasterRCNN_Train_SE.exe"); dsts.push_back("bin/FasterRCNN_Train_SE.exe");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/libiomp5md.dll"); dsts.push_back("bin/libiomp5md.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/mkl_cntk_p.dll"); dsts.push_back("bin/mkl_cntk_p.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/msvcp140.dll"); dsts.push_back("bin/msvcp140.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/nvml.dll"); dsts.push_back("bin/nvml.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/python35.dll"); dsts.push_back("bin/python35.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/ucrtbase.dll"); dsts.push_back("bin/ucrtbase.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/vccorlib140.dll"); dsts.push_back("bin/vccorlib140.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/vcomp140.dll"); dsts.push_back("bin/vcomp140.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/vcruntime140.dll"); dsts.push_back("bin/vcruntime140.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/xlwings32.dll"); dsts.push_back("bin/xlwings32.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/xlwings64.dll"); dsts.push_back("bin/xlwings64.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/zip.dll"); dsts.push_back("bin/zip.dll");
+	urls.push_back("https://github.com/springkim/TSpring/releases/download/frcnn/zlib.dll"); dsts.push_back("bin/zlib.dll");
 	for (size_t i = 0; i < urls.size(); i++) {
 		ispring::Web::Download(urls[i], dsts[i]);
 		_this->DownloadFile(urls[i], dsts[i]);
@@ -942,7 +944,7 @@ UINT Export_FasterRCNN_T(void* param) {
 	int epoch = 1000;
 	///BAT , Pretrained
 	if (_this->GetChkBtnByString(_this->m_chk_models, _this->m_stc_models, TEXT("Alexnet"))->check == true) {
-		_this->DownloadFile("https://www.dropbox.com/s/viwt2u8frkyvxvf/AlexNet_ImageNet_Caffe.model?dl=1", "AlexNet_ImageNet_Caffe.model");
+		_this->DownloadFile("https://github.com/springkim/TSpring/releases/download/frcnn/AlexNet_ImageNet_Caffe.model", "AlexNet_ImageNet_Caffe.model");
 		std::fstream fout("train-Alexnet.bat",std::ios::out);
 		fout << "cd \"bin\"" << std::endl;
 		fout << "\"FasterRCNN_Train_SE.exe\" " << epoch << " AlexNet" << std::endl;
@@ -950,7 +952,7 @@ UINT Export_FasterRCNN_T(void* param) {
 		fout << "pause" << std::endl;
 		fout.close();
 	} else if (_this->GetChkBtnByString(_this->m_chk_models, _this->m_stc_models, TEXT("VGG16"))->check == true) {
-		_this->DownloadFile("https://www.dropbox.com/s/ri9z43wrxzgr910/VGG16_ImageNet_Caffe.model?dl=1", "VGG16_ImageNet_Caffe.model");
+		_this->DownloadFile("https://github.com/springkim/TSpring/releases/download/frcnn/VGG16_ImageNet_Caffe.model", "VGG16_ImageNet_Caffe.model");
 		std::fstream fout("train-VGG16.bat", std::ios::out);
 		fout << "cd \"bin\"" << std::endl;
 		fout << "\"FasterRCNN_Train_SE.exe\" " << epoch << " VGG16" << std::endl;
@@ -958,7 +960,7 @@ UINT Export_FasterRCNN_T(void* param) {
 		fout << "pause" << std::endl;
 		fout.close();
 	} else if (_this->GetChkBtnByString(_this->m_chk_models, _this->m_stc_models, TEXT("VGG19"))->check == true) {
-		_this->DownloadFile("https://www.dropbox.com/s/xr44j3x65heuy4g/VGG19_ImageNet_Caffe.model?dl=1", "VGG19_ImageNet_Caffe.model");
+		_this->DownloadFile("https://github.com/springkim/TSpring/releases/download/frcnn/VGG19_ImageNet_Caffe.model", "VGG19_ImageNet_Caffe.model");
 		std::fstream fout("train-VGG19.bat", std::ios::out);
 		fout << "cd \"bin\"" << std::endl;
 		fout << "\"FasterRCNN_Train_SE.exe\" " << epoch << " VGG19" << std::endl;

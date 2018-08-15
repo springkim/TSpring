@@ -63,7 +63,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct) {
 	this->SetIcon(IDR_MAINFRAME);
 	
 	this->SetStyle(GetTheme().Font(), GetTheme().ColorBK(), GetTheme().ColorText(), GetTheme().ColorBorder());
-	this->SetTitle(TEXT("TSpring 2.5"));
+	this->SetTitle(TEXT("TSpring 2.6"));
 	this->SetTitleColor(GetTheme().ColorTitle());
 	m_menu_frame = CreateFrame<MSpringMenuFrame>(this);
 	m_menu_frame->SetStyle(GetTheme().Font(), GetTheme().ColorBK(), GetTheme().ColorText(), GetTheme().ColorHover(), GetTheme().ColorBK());
@@ -342,7 +342,7 @@ LRESULT CMainFrame::OnDisableHtTest(WPARAM wParam, LPARAM lParam) {
 	return 1;
 }
 UINT _UpdateProgram(LPVOID param) {
-	std::string version = "2.5";
+	std::string version = "2.6";
 	char c_temp[MAX_PATH + 1] = { 0 };
 	SHGetSpecialFolderPathA(AfxGetMainWnd()->GetSafeHwnd(), c_temp, CSIDL_COMMON_APPDATA, TRUE);
 	std::string temp = c_temp;
@@ -404,6 +404,6 @@ UINT _UpdateProgram(LPVOID param) {
 	return 1;
 }
 void CMainFrame::UpdateProgram() {
-	AfxBeginThread(_UpdateProgram,nullptr);
+	//AfxBeginThread(_UpdateProgram,nullptr);
 	//_UpdateProgram(nullptr);
 }

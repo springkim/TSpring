@@ -250,7 +250,7 @@ IDB_UNKNOWN_RED         BITMAP                  "res\\unknown_red.bmp"
 
 IDB_UNKNOWN_BLUE        BITMAP                  "res\\unknown_blue.bmp"
 
-IDB_TSPRING             BITMAP                  "C:\\Users\\sprin\\Documents\\Git\\TSpring\\TSpring\\res\\TSpring.bmp"
+IDB_TSPRING             BITMAP                  "res\\TSpring.bmp"
 
 IDB_CLOSE_ASHSKY        BITMAP                  "res\\close_ashsky.bmp"
 

@@ -7,6 +7,7 @@
 ::
 
 ::start
-powershell "(New-Object System.Net.WebClient).DownloadFile('https://www.dropbox.com/s/sz5ofmhknkug5gx/3rdparty.zip?dl=1','3rdparty.zip')"
+powershell "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;(New-Object System.Net.WebClient).DownloadFile('https://github.com/springkim/TSpring/releases/download/3rdparty/3rdparty.zip','3rdparty.zip')"
 powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::ExtractToDirectory('3rdparty.zip', '3rdparty'); }"
 DEL 3rdparty.zip
+pause
