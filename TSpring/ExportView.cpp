@@ -713,9 +713,9 @@ UINT Export_YOLO_T(void* param) {
 	GetApp().g_progress_current = 1;
 	_this->DownloadFile("https://github.com/springkim/TSpring/releases/download/yolov3/cudnn64_7.dll", "bin/cudnn64_7.dll");
 	GetApp().g_progress_current = 2;
-	_this->DownloadFile("https://github.com/springkim/TSpring/releases/download/yolov3/cublas64_90.dll", "bin/cublas64_80.dll");
+	_this->DownloadFile("https://github.com/springkim/TSpring/releases/download/yolov3/cublas64_90.dll", "bin/cublas64_90.dll");
 	GetApp().g_progress_current = 3;
-	_this->DownloadFile("https://github.com/springkim/TSpring/releases/download/yolov3/curand64_90.dll", "bin/curand64_80.dll");
+	_this->DownloadFile("https://github.com/springkim/TSpring/releases/download/yolov3/curand64_90.dll", "bin/curand64_90.dll");
 	GetApp().g_progress_current = 4;
 	_this->DownloadFile("https://github.com/springkim/TSpring/releases/download/yolov3/vcruntime140.dll", "bin/vcruntime140.dll");
 	GetApp().g_progress_current = 4;
