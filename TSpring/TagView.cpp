@@ -68,9 +68,11 @@ CRect DrawCvMat(CDC* pDC, std::vector<TagInfo>& tag_data, cv::Mat& origin, CRect
 				}
 			}
 		} else {
-			cvrect.width--;
-			cvrect.height--;
-			outImg(cvrect) = origin(cvrect)*d + cv::Scalar(b,g,r)*(1.0F-d);
+			if (cvrect.width > 0 && cvrect.height > 0) {
+				cvrect.width--;
+				cvrect.height--;
+				outImg(cvrect) = origin(cvrect)*d + cv::Scalar(b, g, r)*(1.0F - d);
+			}
 		}
 	}
 
