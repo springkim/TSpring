@@ -63,7 +63,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct) {
 	this->SetIcon(IDR_MAINFRAME);
 	
 	this->SetStyle(GetTheme().Font(), GetTheme().ColorBK(), GetTheme().ColorText(), GetTheme().ColorBorder());
-	this->SetTitle(TEXT("TSpring 2.7"));
+	this->SetTitle(TEXT("TSpring 2.8"));
 	this->SetTitleColor(GetTheme().ColorTitle());
 	m_menu_frame = CreateFrame<MSpringMenuFrame>(this);
 	m_menu_frame->SetStyle(GetTheme().Font(), GetTheme().ColorBK(), GetTheme().ColorText(), GetTheme().ColorHover(), GetTheme().ColorBK());

@@ -372,7 +372,7 @@ public:
 			float rx2 = (rect.x + rect.width) / img.cols;
 			float ry2 = (rect.y + rect.height) / img.rows;
 			RCNNBOX box;
-			box.m_class = C;
+			box.m_class = C+1;
 			box.x1 = static_cast<int>(rx1*W);
 			box.y1 = static_cast<int>(ry1*H);
 			box.x2 = static_cast<int>(rx2*W);
